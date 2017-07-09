@@ -20,14 +20,18 @@ from OpenAeroStruct import OASProblem
 prob_type = 'aerostruct'
 
 # L1 is finest, L3 is coarsest. Can do L1, L1.5, L2, L2.5, L3
-mesh_level = 'L2'
+mesh_level = 'L1'
 print(mesh_level)
 
+solver_options = ['gs_wo_aitken', 'gs_w_aitken', 'newton_gmres', 'hybrid_GSN', 'newton_direct']
+solver_combo = solver_options[2] 
+solver_atol = 1e-7
+
 # Set problem type
-prob_dict = {'optimize' : False,
+prob_dict = {'optimize' : True,
              'type' : prob_type,
              'compute_static_margin' : True,
-             'optimizer' : 'SNOPT',
+             'optimizer' : 'SLSQP',
              'with_viscous' : True,
              'W0' : 14.,  # kg, empty weight from manufacturer
              'a' : 322.2,  # m/s, at 15,000 ft
@@ -37,6 +41,9 @@ prob_dict = {'optimize' : False,
              'Re' : 4e5,
              'M' : .093, # calc'd from 30 m/s cruise speed
              'cg' : np.array([.4, 0., 0.]),  # estimated based on aircraft pictures
+             'solver_combo' : solver_combo,
+             'solver_atol' : solver_atol,
+             'print_level' : 2
              }
 
 # Instantiate problem and add default surface
@@ -81,17 +88,17 @@ surf_dict = {'num_y' : num_y,
              'wing_type' : 'rect',
              'symmetry' : True,
              'span_cos_spacing' : spacing,
-             'span' : 3.11,
+             'span' : 6.11,
              'root_chord' : .3,  # estimate
-             'sweep' : 20.,
+             'sweep' : 30.,
              'taper' : .8,
              'zshear_cp' : zshear_cp,
              'xshear_cp' : xshear_cp,
              'chord_cp' : chord_cp,
 
              # Material properties taken from http://www.performance-composites.com/carbonfibre/mechanicalproperties_2.asp
-             'E' : 85.e9,
-             'G' : 25.e9,
+             'E' : 45.e9,
+             'G' : 15.e9,
              'yield' : 350.e6 / 1.25 / 2.5,
              'mrho' : 1.6e3,
              'CD0' : 0.015,

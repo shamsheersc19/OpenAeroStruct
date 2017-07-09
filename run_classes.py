@@ -24,6 +24,7 @@ import numpy as np
 # =============================================================================
 from openmdao.api import IndepVarComp, Problem, Group, ScipyOptimizer, Newton, ScipyGMRES, LinearGaussSeidel, NLGaussSeidel, SqliteRecorder, profile, CaseReader, DirectSolver
 from openmdao.api import view_model
+from openmdao.solvers.gs_newton import HybridGSNewton
 from six import iteritems
 
 # =============================================================================
@@ -35,7 +36,8 @@ from .vlm import VLMStates, VLMFunctionals, VLMGeometry
 from .spatialbeam import SpatialBeamStates, SpatialBeamFunctionals, SpatialBeamSetup, radii
 from .materials import MaterialsTube
 from .functionals import TotalPerformance, TotalAeroPerformance, FunctionalBreguetRange, FunctionalEquilibrium
-from .gs_newton import HybridGSNewton
+# from .gs_newton import HybridGSNewton
+from openmdao.solvers.gs_newton import HybridGSNewton
 
 try:
     import OAS_API
@@ -1053,25 +1055,120 @@ class OASProblem(object):
             root.connect('coupled.' + name[:-1] + '.b_pts', 'total_perf.' + name + 'b_pts')
             root.connect(name + 'perf.cg_location', 'total_perf.' + name + 'cg_location')
 
-        # Set solver properties for the coupled group
-        coupled.ln_solver = ScipyGMRES()
-        coupled.ln_solver.preconditioner = LinearGaussSeidel()
-        coupled.aero_states.ln_solver = LinearGaussSeidel()
-        coupled.nl_solver = NLGaussSeidel()
+        coupled.set_order(['wing', 'aero_states', 'wing_loads'])
+        coupled.wing.set_order(['struct_states', 'def_mesh', 'aero_geom'])
 
-        # This is only available in the most recent version of OpenMDAO.
-        # It may help converge tightly coupled systems when using NLGS.
-        try:
+        # # Set solver properties for the coupled group
+        # coupled.ln_solver = ScipyGMRES()
+        # coupled.ln_solver.preconditioner = LinearGaussSeidel()
+        # coupled.aero_states.ln_solver = LinearGaussSeidel()
+        # coupled.nl_solver = NLGaussSeidel()
+        # 
+        # # This is only available in the most recent version of OpenMDAO.
+        # # It may help converge tightly coupled systems when using NLGS.
+        # try:
+        #     coupled.nl_solver.options['use_aitken'] = True
+        #     coupled.nl_solver.options['aitken_alpha_min'] = 0.01
+        #     # coupled.nl_solver.options['aitken_alpha_max'] = 0.5
+        # except:
+        #     pass
+        # 
+        # if self.prob_dict['print_level'] == 2:
+        #     coupled.ln_solver.options['iprint'] = 1
+        # if self.prob_dict['print_level']:
+        #     coupled.nl_solver.options['iprint'] = 1
+        
+        solver_combo = self.prob_dict['solver_combo']
+
+        if solver_combo == 'gs_wo_aitken':
+            coupled.ln_solver = ScipyGMRES()
+            coupled.ln_solver.options['maxiter'] = 200
+            coupled.ln_solver.options['atol'] = 1e-10
+            coupled.ln_solver.preconditioner = LinearGaussSeidel()
+            coupled.ln_solver.preconditioner.options['maxiter'] = 1
+            # coupled.aero_states.ln_solver = LinearGaussSeidel()
+            coupled.nl_solver = NLGaussSeidel()
+            coupled.nl_solver.options['maxiter'] = 1000
+        
+        if solver_combo == 'gs_w_aitken':
+            coupled.ln_solver = ScipyGMRES()
+            coupled.ln_solver.options['maxiter'] = 200
+            coupled.ln_solver.options['atol'] = 1e-10
+            coupled.ln_solver.preconditioner = LinearGaussSeidel()
+            coupled.ln_solver.preconditioner.options['maxiter'] = 1
+            # coupled.aero_states.ln_solver = LinearGaussSeidel()
+            coupled.nl_solver = NLGaussSeidel()
+            coupled.nl_solver.options['maxiter'] = 1000
             coupled.nl_solver.options['use_aitken'] = True
             coupled.nl_solver.options['aitken_alpha_min'] = 0.01
-            # coupled.nl_solver.options['aitken_alpha_max'] = 0.5
-        except:
-            pass
+            coupled.nl_solver.options['aitken_alpha_max'] = 1.5
+            
+        if solver_combo == 'newton_gmres':
 
-        if self.prob_dict['print_level'] == 2:
-            coupled.ln_solver.options['iprint'] = 1
-        if self.prob_dict['print_level']:
-            coupled.nl_solver.options['iprint'] = 1
+            coupled.ln_solver = ScipyGMRES()
+            coupled.ln_solver.options['maxiter'] = 200
+            coupled.ln_solver.preconditioner = LinearGaussSeidel()
+            coupled.ln_solver.preconditioner.options['maxiter'] = 1
+            coupled.ln_solver.options['atol'] = 1e-10
+            
+            # coupled.aero_states.ln_solver = LinearGaussSeidel()
+            coupled.nl_solver = Newton()
+            coupled.nl_solver.options['maxiter'] = 20
+            coupled.nl_solver.options['solve_subsystems'] = False
+            
+            # print(coupled.nl_solver.options['iprint'])
+            # print(coupled.ln_solver.options['iprint'])
+            # print(coupled.ln_solver.preconditioner.options['iprint'])
+            # exit()
+        
+        if solver_combo == 'newton_direct':
+            
+            coupled.ln_solver = DirectSolver()            
+            coupled.aero_states.ln_solver = LinearGaussSeidel()
+            coupled.nl_solver = Newton()
+            coupled.nl_solver.options['maxiter'] = 200
+            
+        if solver_combo == 'hybrid_GSN':
+            
+            print("CONFIRM HYBRID")
+            
+            coupled.ln_solver = ScipyGMRES()
+            coupled.ln_solver.options['maxiter'] = 200
+            coupled.ln_solver.options['atol'] = 1e-10
+            coupled.ln_solver.preconditioner = LinearGaussSeidel()
+            coupled.ln_solver.preconditioner.options['maxiter'] = 1
+            
+            coupled.nl_solver = HybridGSNewton()
+            coupled.nl_solver.options['maxiter_nlgs'] = 1000
+            coupled.nl_solver.options['maxiter_newton'] = 20
+            
+            coupled.nl_solver.nlgs.options['use_aitken'] = True
+            coupled.nl_solver.nlgs.options['aitken_alpha_min'] = .01
+            coupled.nl_solver.nlgs.options['aitken_alpha_max'] = 1.5
+            
+            coupled.nl_solver.newton.ln_solver = ScipyGMRES()
+            # coupled.nl_solver.newton.ln_solver.options['iprint'] = 2
+            coupled.nl_solver.newton.ln_solver.options['maxiter'] = 200
+            coupled.nl_solver.newton.ln_solver.preconditioner = LinearGaussSeidel()
+            coupled.nl_solver.newton.ln_solver.preconditioner.options['maxiter'] = 1
+            coupled.nl_solver.newton.ln_solver.preconditioner.options['iprint'] = 0
+            coupled.nl_solver.newton.ln_solver.options['atol'] = 1e-10
+            
+            # coupled.aero_states.ln_solver = LinearGaussSeidel()
+
+        coupled.nl_solver.options['atol'] = self.prob_dict['solver_atol']
+        coupled.nl_solver.options['rtol'] = 1e-100
+        coupled.nl_solver.options['utol'] = 1e-100
+
+
+        # if self.prob_dict['print_level'] == 2:
+        #     coupled.ln_solver.options['iprint'] = 1
+        # if self.prob_dict['print_level']:
+        #     coupled.nl_solver.options['iprint'] = 1
+            
+        coupled.ln_solver.options['iprint'] = self.prob_dict['print_level']
+        coupled.nl_solver.options['iprint'] = self.prob_dict['print_level']
+        
 
         # Add the coupled group to the root problem
         root.add('coupled', coupled, promotes=['v', 'alpha', 'rho'])

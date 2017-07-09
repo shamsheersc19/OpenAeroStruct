@@ -45,11 +45,22 @@ if __name__ == "__main__":
         print(' +---------------------------------------------------------------+\n')
         raise
 
+    # for index1 in [0,1,2]:
+    #     for index2 in [1,2,3]:
+    
+    solver_options = ['gs_wo_aitken', 'gs_w_aitken', 'newton_gmres', 'hybrid_GSN', 'newton_direct']
+    # solver_combo = solver_options[index2] 
+    solver_combo = solver_options[2] 
+    solver_atol = 5e-6
 
     # Set problem type
     prob_dict = {'type' : 'aerostruct',
                  'with_viscous' : True,
-                 'cg' : np.array([30., 0., 5.])
+                #  'force_fd' : True,
+                 'cg' : np.array([30., 0., 5.]),
+                 'solver_combo' : solver_combo,
+                 'solver_atol' : solver_atol,
+                 'print_level' : 2
                  }
 
     if sys.argv[1].startswith('0'):  # run analysis once
@@ -61,21 +72,37 @@ if __name__ == "__main__":
     OAS_prob = OASProblem(prob_dict)
 
     # Create a dictionary to store options about the surface
-    surf_dict = {'num_y' : 5,
-                 'num_x' : 2,
+    # surf_dict = {'num_y' : 5,
+    #              'num_x' : 2,
+    #              'wing_type' : 'CRM',
+    #              'CD0' : 0.015,
+    #              'symmetry' : True,
+    #              'num_twist_cp' : 3,
+    #              'num_thickness_cp' : 3,
+    #              'twist_cp' : np.array([2., 5., -2.]),
+    #              'x_shear_cp' : np.array([1., 4., 5.])}
+
+    twistz = [np.array([0., 0., 0., 0., 0.]), np.array([1., 2., 1., 7., -1.]), np.array([6., 4., 2., 0., -2.])]
+                 
+    surf_dict = {'num_y' : 61,
+                 'num_x' : 3,
                  'wing_type' : 'CRM',
+                 'span_cos_spacing' : 0,
                  'CD0' : 0.015,
                  'symmetry' : True,
-                 'num_twist_cp' : 3,
-                 'num_thickness_cp' : 3,
-                 'twist_cp' : np.array([2., 5., -2.]),
-                 'x_shear_cp' : np.array([1., 4., 5.])}
+                 'num_twist_cp' : 5,
+                 'num_thickness_cp' : 5,
+                #  'twist_cp' : twistz[index1],
+                # 'twist_cp' : twistz[0],
+                 'twist_cp' : np.array([-6.367754, -3.900320, 2.066440, -0.842926, 2.790083]),
+                 'thickness_cp' : (np.array([1.000000, 1.000000, 7.125175, 4.477462, 4.238271 ]) * 0.01),
+                 'x_shear_cp' : np.array([1., 2., 3., 4., 5.])}
 
     # Add the specified wing surface to the problem
     OAS_prob.add_surface(surf_dict)
 
     # Add design variables, constraint, and objective on the problem
-    OAS_prob.add_desvar('alpha', lower=-10., upper=10.)
+    # OAS_prob.add_desvar('alpha', lower=-10., upper=10.)
     OAS_prob.add_constraint('L_equals_W', equals=0.)
     OAS_prob.add_objective('fuelburn', scaler=1e-5)
 
