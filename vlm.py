@@ -505,7 +505,11 @@ class VLMGeometry(Component):
         self.ny = surface['num_y']
         self.nx = surface['num_x']
 
-        self.fem_origin = surface['fem_origin']
+        # self.fem_origin = surface['fem_origin']
+        # self.fem_origin = (surface['data_x_upper'][0] + surface['data_x_upper'][-1]) / 2.
+        self.fem_origin = (surface['data_x_upper'][0] *(surface['data_y_upper'][0]-surface['data_y_lower'][0]) + \
+        surface['data_x_upper'][-1]*(surface['data_y_upper'][-1]-surface['data_y_lower'][-1])) / \
+        ( (surface['data_y_upper'][0]-surface['data_y_lower'][0]) + (surface['data_y_upper'][-1]-surface['data_y_lower'][-1]))
 
         self.add_param('def_mesh', val=np.zeros((self.nx, self.ny, 3),
                        dtype=data_type))
@@ -1516,8 +1520,12 @@ class ViscousDrag(Component):
         self.add_param('cos_sweep', val=np.zeros((ny-1)))
         self.add_param('widths', val=np.zeros((ny-1)))
         self.add_param('lengths', val=np.zeros((ny)))
+        self.add_param('CL', val=0.)
         self.add_output('CDv', val=0.)
         self.with_viscous = with_viscous
+        
+        self.deriv_options['type'] = 'fd'
+        self.deriv_options['form'] = 'central'
 
     def solve_nonlinear(self, params, unknowns, resids):
         if self.with_viscous:
@@ -1560,71 +1568,78 @@ class ViscousDrag(Component):
 
             # Sum individual panel drags to get total drag
             self.D_over_q = np.sum(self.d_over_q * widths * FF)
-
+            
+            avg_cos_sweep = np.mean(cos_sweep)
+            MDD = 0.95 / avg_cos_sweep - self.t_over_c / avg_cos_sweep**2 - params['CL'] / (10*avg_cos_sweep**3)
+            Mcrit = MDD - (0.1/80.)**(1./3.)
+            CDwave = 20*(M-Mcrit)**4
+            
             unknowns['CDv'] = self.D_over_q / S_ref
-
+            
+            unknowns['CDv'] += CDwave
+            
             if self.surface['symmetry']:
                 unknowns['CDv'] *= 2
         else:
             unknowns['CDv'] = 0.0
 
-    def linearize(self, params, unknowns, resids):
-        """ Jacobian for viscous drag."""
-
-        jac = self.alloc_jacobian()
-        jac['CDv', 'lengths'] = np.zeros_like(jac['CDv', 'lengths'])
-        re = params['re']
-
-        if self.with_viscous:
-            p180 = np.pi / 180.
-            M = params['M']
-            S_ref = params['S_ref']
-
-            widths = params['widths']
-            lengths = params['lengths']
-            cos_sweep = params['cos_sweep'] / widths
-
-            B = (1. + 0.144*M**2)**0.65
-
-            FF = self.k_FF * cos_sweep**0.28
-
-            chords = (lengths[1:] + lengths[:-1]) / 2.
-            Re_c = re * chords
-
-            cdl_Re = 0.0
-            cdt_Re = 0.0
-            cdT_Re = 0.0
-
-            if self.k_lam == 0:
-                cdT_Re = 0.455/(np.log10(Re_c))**3.58/B * \
-                            -2.58 / np.log(10) / Re_c
-            elif self.k_lam < 1.0:
-
-                cdl_Re = 1.328 / (Re_c*self.k_lam)**1.5 * -0.5 * self.k_lam
-                cdt_Re = 0.455/(np.log10(Re_c*self.k_lam))**3.58/B * \
-                            -2.58 / np.log(10) / Re_c
-                cdT_Re = 0.455/(np.log10(Re_c))**3.58/B * \
-                            -2.58 / np.log(10) / Re_c
-            else:
-                cdl_Re = 1.328 / (Re_c*self.k_lam)**1.5 * -0.5 * self.k_lam
-
-            cd_Re = (cdl_Re - cdt_Re)*self.k_lam + cdT_Re
-
-            CDv_lengths = 2 * widths * FF / S_ref * \
-                (self.d_over_q / 4 / chords + chords * cd_Re * re / 2.)
-            jac['CDv', 'lengths'][0, 1:] += CDv_lengths
-            jac['CDv', 'lengths'][0, :-1] += CDv_lengths
-            jac['CDv', 'widths'][0, :] = self.d_over_q * FF / S_ref * 0.72
-            jac['CDv', 'S_ref'] = - self.D_over_q / S_ref**2
-            jac['CDv', 'cos_sweep'][0, :] = 0.28 * self.k_FF * self.d_over_q / S_ref / cos_sweep**0.72
-
-            if self.surface['symmetry']:
-                jac['CDv', 'lengths'][0, :] *=  2
-                jac['CDv', 'widths'][0, :] *= 2
-                jac['CDv', 'S_ref'] *=  2
-                jac['CDv', 'cos_sweep'][0, :] *=  2
-
-        return jac
+    # def linearize(self, params, unknowns, resids):
+    #     """ Jacobian for viscous drag."""
+    # 
+    #     jac = self.alloc_jacobian()
+    #     jac['CDv', 'lengths'] = np.zeros_like(jac['CDv', 'lengths'])
+    #     re = params['re']
+    # 
+    #     if self.with_viscous:
+    #         p180 = np.pi / 180.
+    #         M = params['M']
+    #         S_ref = params['S_ref']
+    # 
+    #         widths = params['widths']
+    #         lengths = params['lengths']
+    #         cos_sweep = params['cos_sweep'] / widths
+    # 
+    #         B = (1. + 0.144*M**2)**0.65
+    # 
+    #         FF = self.k_FF * cos_sweep**0.28
+    # 
+    #         chords = (lengths[1:] + lengths[:-1]) / 2.
+    #         Re_c = re * chords
+    # 
+    #         cdl_Re = 0.0
+    #         cdt_Re = 0.0
+    #         cdT_Re = 0.0
+    # 
+    #         if self.k_lam == 0:
+    #             cdT_Re = 0.455/(np.log10(Re_c))**3.58/B * \
+    #                         -2.58 / np.log(10) / Re_c
+    #         elif self.k_lam < 1.0:
+    # 
+    #             cdl_Re = 1.328 / (Re_c*self.k_lam)**1.5 * -0.5 * self.k_lam
+    #             cdt_Re = 0.455/(np.log10(Re_c*self.k_lam))**3.58/B * \
+    #                         -2.58 / np.log(10) / Re_c
+    #             cdT_Re = 0.455/(np.log10(Re_c))**3.58/B * \
+    #                         -2.58 / np.log(10) / Re_c
+    #         else:
+    #             cdl_Re = 1.328 / (Re_c*self.k_lam)**1.5 * -0.5 * self.k_lam
+    # 
+    #         cd_Re = (cdl_Re - cdt_Re)*self.k_lam + cdT_Re
+    # 
+    #         CDv_lengths = 2 * widths * FF / S_ref * \
+    #             (self.d_over_q / 4 / chords + chords * cd_Re * re / 2.)
+    #         jac['CDv', 'lengths'][0, 1:] += CDv_lengths
+    #         jac['CDv', 'lengths'][0, :-1] += CDv_lengths
+    #         jac['CDv', 'widths'][0, :] = self.d_over_q * FF / S_ref * 0.72
+    #         jac['CDv', 'S_ref'] = - self.D_over_q / S_ref**2
+    #         jac['CDv', 'cos_sweep'][0, :] = 0.28 * self.k_FF * self.d_over_q / S_ref / cos_sweep**0.72
+    # 
+    #         if self.surface['symmetry']:
+    #             jac['CDv', 'lengths'][0, :] *=  2
+    #             jac['CDv', 'widths'][0, :] *= 2
+    #             jac['CDv', 'S_ref'] *=  2
+    #             jac['CDv', 'cos_sweep'][0, :] *=  2
+    # 
+    #     return jac
 
 class VLMCoeffs(Component):
     """ Compute lift and drag coefficients for each individual lifting surface.

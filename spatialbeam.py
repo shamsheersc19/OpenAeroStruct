@@ -25,14 +25,16 @@ def norm(vec):
 def unit(vec):
     return vec / norm(vec)
 
-def radii(mesh, t_c=0.15):
+def chords_fem(mesh):
     """
-    Obtain the radii of the FEM element based on local chord.
+    Obtain the chord of the FEM element.
+    This computes the chords by taking the average of the chords from the mesh.
+    
     """
     vectors = mesh[-1, :, :] - mesh[0, :, :]
-    chords = np.sqrt(np.sum(vectors**2, axis=1))
-    chords = 0.5 * chords[:-1] + 0.5 * chords[1:]
-    return t_c * chords / 2.
+    chords_fem = np.sqrt(np.sum(vectors**2, axis=1))
+    chords_fem = 0.5 * chords_fem[:-1] + 0.5 * chords_fem[1:] # Average chord between nodes
+    return chords_fem
 
 def _assemble_system(nodes, A, J, Iy, Iz,
                      K_a, K_t, K_y, K_z,
@@ -45,8 +47,10 @@ def _assemble_system(nodes, A, J, Iy, Iz,
     per element.
 
     Can be run in Fortran or Python code depending on the flags used.
+    Need to give area, torsion constant, area moments of inertia, E, G
     """
 
+    # print(nodes, A, J, Iy, Iz)
     # Fortran
     if fortran_flag:
         K = OAS_API.oas_api.assemblestructmtx(nodes, A, J, Iy, Iz,
@@ -130,8 +134,7 @@ class ComputeNodes(Component):
     """
     Compute FEM nodes based on aerodynamic mesh.
 
-    The FEM nodes are placed at fem_origin * chord,
-    with the default fem_origin = 0.35.
+    The FEM nodes are placed at fem_origin * chord.
 
     Parameters
     ----------
@@ -150,7 +153,10 @@ class ComputeNodes(Component):
 
         self.ny = surface['num_y']
         self.nx = surface['num_x']
-        self.fem_origin = surface['fem_origin']
+        # self.fem_origin = (surface['data_x_upper'][0] + surface['data_x_upper'][-1]) / 2.
+        self.fem_origin = (surface['data_x_upper'][0] *(surface['data_y_upper'][0]-surface['data_y_lower'][0]) + \
+        surface['data_x_upper'][-1]*(surface['data_y_upper'][-1]-surface['data_y_lower'][-1])) / \
+        ( (surface['data_y_upper'][0]-surface['data_y_lower'][0]) + (surface['data_y_upper'][-1]-surface['data_y_lower'][-1]))
 
         self.add_param('mesh', val=np.zeros((self.nx, self.ny, 3), dtype=data_type))
         self.add_output('nodes', val=np.zeros((self.ny, 3), dtype=data_type))
@@ -203,11 +209,11 @@ class AssembleK(Component):
 
         self.size = size = 6 * self.ny + 6
 
-        self.add_param('A', val=np.zeros((self.ny - 1), dtype=data_type))
-        self.add_param('Iy', val=np.zeros((self.ny - 1), dtype=data_type))
-        self.add_param('Iz', val=np.zeros((self.ny - 1), dtype=data_type))
-        self.add_param('J', val=np.zeros((self.ny - 1), dtype=data_type))
-        self.add_param('nodes', val=np.zeros((self.ny, 3), dtype=data_type))
+        self.add_param('A', val=np.ones((self.ny - 1), dtype=data_type))
+        self.add_param('Iy', val=np.ones((self.ny - 1), dtype=data_type))
+        self.add_param('Iz', val=np.ones((self.ny - 1), dtype=data_type))
+        self.add_param('J', val=np.ones((self.ny - 1), dtype=data_type))
+        self.add_param('nodes', val=np.ones((self.ny, 3), dtype=data_type))
 
         self.add_output('K', val=np.zeros((size, size), dtype=data_type))
 
@@ -402,7 +408,7 @@ class SpatialBeamFEM(Component):
     def solve_nonlinear(self, params, unknowns, resids):
         """ Use np to solve Ax=b for x.
         """
-
+        # print(np.min(params['K']))
         # lu factorization for use with solve_linear
         self.lup = lu_factor(params['K'])
 
@@ -658,89 +664,135 @@ class SpatialBeamVonMisesTube(Component):
         self.ny = surface['num_y']
 
         self.add_param('nodes', val=np.zeros((self.ny, 3),
-                       dtype=data_type))
-        self.add_param('radius', val=np.zeros((self.ny - 1),
-                       dtype=data_type))
+                       dtype=complex))
+        # self.add_param('radius', val=np.zeros((self.ny - 1),
+        #                dtype=complex))
         self.add_param('disp', val=np.zeros((self.ny, 6),
-                       dtype=data_type))
+                       dtype=complex))
 
-        self.add_output('vonmises', val=np.zeros((self.ny-1, 2),
-                        dtype=data_type))
-
-        if not fortran_flag:
-            self.deriv_options['type'] = 'cs'
-            self.deriv_options['form'] = 'central'
+        self.add_output('vonmises', val=np.zeros((self.ny-1, 4),
+                        dtype=complex))
+                        
+        self.add_param('A', val=np.zeros((self.ny - 1), dtype=complex))
+        self.add_param('Iy', val=np.zeros((self.ny - 1), dtype=complex))
+        self.add_param('Iz', val=np.zeros((self.ny - 1), dtype=complex))
+        self.add_param('J', val=np.zeros((self.ny - 1), dtype=complex))
+        self.add_param('A_enc', val=np.zeros((self.ny - 1), dtype=complex))
+        self.add_param('thickness', val=np.zeros((self.ny - 1)), dtype=complex)
+        self.add_param('A_spar', val=np.ones((self.ny - 1),  dtype = complex))
+        
+        self.add_param('sparthickness', val=np.zeros((self.ny - 1)), dtype=complex)
+        self.add_param('skinthickness', val=np.zeros((self.ny - 1)), dtype=complex)
+        
+        self.add_param('htop', val=np.zeros((self.ny - 1), dtype=complex))
+        self.add_param('hbottom', val=np.zeros((self.ny - 1), dtype=complex))
+        self.add_param('hleft', val=np.zeros((self.ny - 1), dtype=complex))
+        self.add_param('hright', val=np.zeros((self.ny - 1)), dtype=complex)
+        
+        # if not fortran_flag:
+        self.deriv_options['type'] = 'cs'
+        # self.deriv_options['form'] = 'central'
 
         self.E = surface['E']
         self.G = surface['G']
 
-        self.T = np.zeros((3, 3), dtype=data_type)
-        self.x_gl = np.array([1, 0, 0], dtype=data_type)
+        self.T = np.zeros((3, 3), dtype=complex)
+        self.x_gl = np.array([1, 0, 0], dtype=complex)
         self.t = 0
+        
+        self.tssf = top_skin_strength_factor = surface['strength_factor_for_upper_skin']
 
     def solve_nonlinear(self, params, unknowns, resids):
-        radius = params['radius']
+        # radius = params['radius']
         disp = params['disp']
         nodes = params['nodes']
         vonmises = unknowns['vonmises']
+        A = params['A']
+        A_enc = params['A_enc']
+        A_spar = params['A_spar']
+        Iy = params['Iy']
+        Iz = params['Iz']
+        J = params['J']
+        # print("A is", A, "A_enc is",A_enc,"Iy",Iy,"Iz",Iz, "J", J)
+        htop = params['htop']
+        hbottom = params['hbottom']
+        hleft = params['hleft']
+        hright = params['hright']
+        thickness = params['thickness']
+        sparthickness = params['sparthickness']
+        skinthickness = params['skinthickness']
+        
+        # print(thickness); exit()
+        # print("htop is", htop, "hbottom", hbottom)
+        
         T = self.T
         E = self.E
         G = self.G
         x_gl = self.x_gl
 
-        if fortran_flag:
-            vm = OAS_API.oas_api.calc_vonmises(nodes, radius, disp, E, G, x_gl)
-            unknowns['vonmises'] = vm
+        num_elems = self.ny - 1
+        for ielem in range(self.ny-1):
 
-        else:
+            P0 = nodes[ielem, :]
+            P1 = nodes[ielem+1, :]
+            L = norm(P1 - P0)
+            
+            x_loc = unit(P1 - P0)
+            y_loc = unit(np.cross(x_loc, x_gl))
+            z_loc = unit(np.cross(x_loc, y_loc))
 
-            num_elems = self.ny - 1
-            for ielem in range(self.ny-1):
+            T[0, :] = x_loc
+            T[1, :] = y_loc
+            T[2, :] = z_loc
 
-                P0 = nodes[ielem, :]
-                P1 = nodes[ielem+1, :]
-                L = norm(P1 - P0)
+            u0x, u0y, u0z = T.dot(disp[ielem, :3])
+            r0x, r0y, r0z = T.dot(disp[ielem, 3:])
+            u1x, u1y, u1z = T.dot(disp[ielem+1, :3])
+            r1x, r1y, r1z = T.dot(disp[ielem+1, 3:])
+            
+            
+            axial_stress = E * (u1x - u0x) / L      # this is stress = modulus * strain; positive is tensile
+            torsion_stress = G * J[ielem] / L * (r1x - r0x) / 2 / sparthickness[ielem] / A_enc[ielem]   # this is Torque / (2 * thickness_min * Area_enclosed)
+            top_bending_stress = E / (L**2) * (6 * u0y + 2 * r0z * L - 6 * u1y + 4 * r1z * L ) * htop[ielem] # this is moment * htop / I  
+            bottom_bending_stress = - E / (L**2) * (6 * u0y + 2 * r0z * L - 6 * u1y + 4 * r1z * L ) * hbottom[ielem] # this is moment * htop / I  
+            left_bending_stress = - E / (L**2) * (-6 * u0z + 2 * r0y * L + 6 * u1z + 4 * r1y * L ) * hleft[ielem] # this is moment * htop / I  
+            right_bending_stress = E / (L**2) * (-6 * u0z + 2 * r0y * L + 6 * u1z + 4 * r1y * L ) * hright[ielem] # this is moment * htop / I  
+            
+            vertical_shear = 1.5 / A_spar[ielem] * E * Iz[ielem] / (L**3) *(-12 * u0y - 6 * r0z * L + 12 * u1y - 6 * r1z * L ) # conservative estimate for shear due to bending
+            
+            # print("==========",ielem,"================")
+            # print("vertical_shear", vertical_shear)
+            # print("top",top_bending_stress)
+            # print("bottom",bottom_bending_stress)
+            # print("left",left_bending_stress)
+            # print("right",right_bending_stress)
+            # print("axial", axial_stress)
+            # print("torsion", torsion_stress)
+        
+            vonmises[ielem, 0] = np.sqrt((top_bending_stress + right_bending_stress + axial_stress)**2 + 3*torsion_stress**2) / self.tssf
+            vonmises[ielem, 1] = np.sqrt((bottom_bending_stress + left_bending_stress + axial_stress)**2 + 3*torsion_stress**2)
+            vonmises[ielem, 2] = np.sqrt((left_bending_stress + axial_stress)**2 + 3*(torsion_stress-vertical_shear)**2) 
+            vonmises[ielem, 3] = np.sqrt((right_bending_stress + axial_stress)**2 + 3*(torsion_stress+vertical_shear)**2) / self.tssf
 
-                x_loc = unit(P1 - P0)
-                y_loc = unit(np.cross(x_loc, x_gl))
-                z_loc = unit(np.cross(x_loc, y_loc))
-
-                T[0, :] = x_loc
-                T[1, :] = y_loc
-                T[2, :] = z_loc
-
-                u0x, u0y, u0z = T.dot(disp[ielem, :3])
-                r0x, r0y, r0z = T.dot(disp[ielem, 3:])
-                u1x, u1y, u1z = T.dot(disp[ielem+1, :3])
-                r1x, r1y, r1z = T.dot(disp[ielem+1, 3:])
-
-                tmp = np.sqrt((r1y - r0y)**2 + (r1z - r0z)**2)
-                sxx0 = E * (u1x - u0x) / L + E * radius[ielem] / L * tmp
-                sxx1 = E * (u0x - u1x) / L + E * radius[ielem] / L * tmp
-                sxt = G * radius[ielem] * (r1x - r0x) / L
-
-                vonmises[ielem, 0] = np.sqrt(sxx0**2 + sxt**2)
-                vonmises[ielem, 1] = np.sqrt(sxx1**2 + sxt**2)
-
-    def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode):
-
-        radius = params['radius'].real
-        disp = params['disp'].real
-        nodes = params['nodes'].real
-        vonmises = unknowns['vonmises'].real
-        E = self.E
-        G = self.G
-        x_gl = self.x_gl
-
-        if mode == 'fwd':
-            _, vonmisesd = OAS_API.oas_api.calc_vonmises_d(nodes, dparams['nodes'], radius, dparams['radius'], disp, dparams['disp'], E, G, x_gl)
-            dresids['vonmises'] += vonmisesd
-
-        if mode == 'rev':
-            nodesb, radiusb, dispb = OAS_API.oas_api.calc_vonmises_b(nodes, radius, disp, E, G, x_gl, vonmises, dresids['vonmises'])
-            dparams['nodes'] += nodesb
-            dparams['radius'] += radiusb
-            dparams['disp'] += dispb
+    # def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode):
+    # 
+    #     radius = params['radius'].real
+    #     disp = params['disp'].real
+    #     nodes = params['nodes'].real
+    #     vonmises = unknowns['vonmises'].real
+    #     E = self.E
+    #     G = self.G
+    #     x_gl = self.x_gl
+    # 
+    #     if mode == 'fwd':
+    #         _, vonmisesd = OAS_API.oas_api.calc_vonmises_d(nodes, dparams['nodes'], radius, dparams['radius'], disp, dparams['disp'], E, G, x_gl)
+    #         dresids['vonmises'] += vonmisesd
+    # 
+    #     if mode == 'rev':
+    #         nodesb, radiusb, dispb = OAS_API.oas_api.calc_vonmises_b(nodes, radius, disp, E, G, x_gl, vonmises, dresids['vonmises'])
+    #         dparams['nodes'] += nodesb
+    #         dparams['radius'] += radiusb
+    #         dparams['disp'] += dispb
 
 class SpatialBeamFailureKS(Component):
     """
@@ -777,7 +829,7 @@ class SpatialBeamFailureKS(Component):
 
         self.ny = surface['num_y']
 
-        self.add_param('vonmises', val=np.zeros((self.ny-1, 2), dtype=data_type))
+        self.add_param('vonmises', val=np.zeros((self.ny-1, 4), dtype=data_type))
         self.add_output('failure', val=0.)
 
         self.sigma = surface['yield']
@@ -843,8 +895,8 @@ class SpatialBeamFailureExact(Component):
 
         self.ny = surface['num_y']
 
-        self.add_param('vonmises', val=np.zeros((self.ny-1, 2), dtype=data_type))
-        self.add_output('failure', val=np.zeros((self.ny-1, 2), dtype=data_type))
+        self.add_param('vonmises', val=np.zeros((self.ny-1, 4), dtype=data_type))
+        self.add_output('failure', val=np.zeros((self.ny-1, 4), dtype=data_type))
 
         self.sigma = surface['yield']
 
@@ -998,9 +1050,9 @@ class SpatialBeamFunctionals(Group):
         self.add('vonmises',
                  SpatialBeamVonMisesTube(surface),
                  promotes=['*'])
-        self.add('thicknessconstraint',
-                 NonIntersectingThickness(surface),
-                 promotes=['*'])
+        # self.add('thicknessconstraint',
+        #          NonIntersectingThickness(surface),
+        #          promotes=['*'])
         # The following component has not been fully tested so we leave it
         # commented out for now. Use at own risk.
         # self.add('sparconstraint',

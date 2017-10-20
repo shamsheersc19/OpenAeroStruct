@@ -6,7 +6,7 @@ from numpy import cos, sin, tan
 
 from openmdao.api import Component
 from .b_spline import get_bspline_mtx
-from .spatialbeam import radii
+from .spatialbeam import chords_fem
 
 try:
     import OAS_API
@@ -412,11 +412,9 @@ class GeometryMesh(Component):
 
         # If the user doesn't provide the radius or it's not a desver, then we must
         # compute it here.
-        if 'radius_cp' not in desvar_names and 'radius_cp' not in surface['initial_geo']:
-            self.compute_radius = True
-            self.add_output('radius', val=np.zeros((ny - 1)))
-        else:
-            self.compute_radius = False
+
+        self.add_output('chords_fem', val=np.ones((ny - 1)))
+        self.add_output('twist_fem', val=np.ones((ny - 1)))
 
         self.symmetry = surface['symmetry']
 
@@ -424,9 +422,9 @@ class GeometryMesh(Component):
         # additional rotation matrix to modify the twist direction
         self.rotate_x = True
 
-        if not fortran_flag:
-            self.deriv_options['type'] = 'fd'
-            self.deriv_options['form'] = 'central'
+        # if not fortran_flag:
+        self.deriv_options['type'] = 'fd'
+        self.deriv_options['form'] = 'central'
 
     def solve_nonlinear(self, params, unknowns, resids):
         mesh = self.mesh.copy()
@@ -451,99 +449,145 @@ class GeometryMesh(Component):
             shear_z(mesh, self.geo_params['zshear'])
             rotate(mesh, self.geo_params['twist'], self.symmetry, self.rotate_x)
 
-        # Only compute the radius on the first iteration.
-        if self.compute_radius and 'radius_cp' not in self.desvar_names:
-            # Get spar radii and interpolate to radius control points.
-            # Need to refactor this at some point.
-            unknowns['radius'] = radii(mesh, self.surface['t_over_c'])
-            self.compute_radius = False
+        ch_fem = chords_fem(mesh)
+        twist_fem = ch_fem.copy()
+        
+        surface = self.surface
+        w = (surface['data_x_upper'][0] *(surface['data_y_upper'][0]-surface['data_y_lower'][0]) + \
+        surface['data_x_upper'][-1]*(surface['data_y_upper'][-1]-surface['data_y_lower'][-1])) / \
+        ( (surface['data_y_upper'][0]-surface['data_y_lower'][0]) + (surface['data_y_upper'][-1]-surface['data_y_lower'][-1]))
+        nodes = (1-w) * mesh[0, :, :] + w * mesh[-1, :, :]
+        
+        mesh_vectors = mesh[-1, :, :] - mesh[0, :, :]
+        
+        for ielem in range(mesh.shape[1] - 1):
+        
+            # Obtain the element nodes
+            P0 = nodes[ielem, :]
+            P1 = nodes[ielem+1, :]
+        
+            elem_vec = (P1 - P0) # vector along element
+            temp_vec = elem_vec.copy()
+            temp_vec[0] = 0. # vector along element minus x component
+            
+            # This is used to get chord length normal to FEM element 
+            cos_theta_fe_sweep = elem_vec.dot(temp_vec) / np.linalg.norm(elem_vec) / np.linalg.norm(temp_vec)
+            ch_fem_temp_val = ch_fem[ielem]
+            ch_fem[ielem] = ch_fem[ielem] * cos_theta_fe_sweep
+            
+            # The following is used to approximate the twist angle for the section normal to the FEM element
+            mesh_vec_0 = mesh_vectors[ielem]
+            temp_mesh_vectors_0 = mesh_vec_0.copy()
+            temp_mesh_vectors_0[2] = 0.
+            
+            dot_prod_0 = mesh_vec_0.dot(temp_mesh_vectors_0) / np.linalg.norm(mesh_vec_0) / np.linalg.norm(temp_mesh_vectors_0)
+            
+            if dot_prod_0 > 1.:
+                theta_0 = 0. # to prevent nan in case value for arccos is greater than 1 due to machine precision
+            else:    
+                theta_0 = np.arccos(dot_prod_0)
+            
+            mesh_vec_1 = mesh_vectors[ielem + 1]
+            temp_mesh_vectors_1 = mesh_vec_1.copy()
+            temp_mesh_vectors_1[2] = 0.
+            
+            dot_prod_1 = mesh_vec_1.dot(temp_mesh_vectors_1) / np.linalg.norm(mesh_vec_1) / np.linalg.norm(temp_mesh_vectors_1)
+            
+            if dot_prod_1 > 1.:
+                theta_1 = 0. # to prevent nan in case value for arccos is greater than 1 due to machine precision
+            else:    
+                theta_1 = np.arccos(dot_prod_1)
+            
+            twist_fem[ielem] = (theta_0 + theta_1) / 2 * ch_fem_temp_val / ch_fem[ielem]
 
         unknowns['mesh'] = mesh
-
-    def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode):
-        mesh = self.mesh.copy()
-
-        # We actually use the values in self.geo_params to modify the mesh,
-        # but we update self.geo_params using the OpenMDAO params here.
-        # This makes the geometry manipulation process work for any combination
-        # of design variables without having special logic.
-        self.geo_params.update(params)
-
-        if mode == 'fwd':
-
-            # We don't know which parameters will be used for a given case
-            # so we must check
-            if 'sweep' in dparams:
-                sweepd = dparams['sweep']
-            else:
-                sweepd = 0.
-            if 'twist' in dparams:
-                twistd = dparams['twist']
-            else:
-                twistd = np.zeros(self.geo_params['twist'].shape)
-            if 'chord' in dparams:
-                chordd = dparams['chord']
-            else:
-                chordd = np.zeros(self.geo_params['chord'].shape)
-            if 'dihedral' in dparams:
-                dihedrald = dparams['dihedral']
-            else:
-                dihedrald = 0.
-            if 'taper' in dparams:
-                taperd = dparams['taper']
-            else:
-                taperd = 0.
-            if 'xshear' in dparams:
-                xsheard = dparams['xshear']
-            else:
-                xsheard = np.zeros(self.geo_params['xshear'].shape)
-            if 'yshear' in dparams:
-                ysheard = dparams['yshear']
-            else:
-                ysheard = np.zeros(self.geo_params['yshear'].shape)
-            if 'zshear' in dparams:
-                zsheard = dparams['zshear']
-            else:
-                zsheard = np.zeros(self.geo_params['zshear'].shape)
-            if 'span' in dparams:
-                spand = dparams['span']
-            else:
-                spand = 0.
-
-            mesh, dresids['mesh'] = OAS_API.oas_api.manipulate_mesh_d(mesh,
-            self.geo_params['taper'], taperd, self.geo_params['chord'], chordd,
-            self.geo_params['sweep'], sweepd, self.geo_params['xshear'], xsheard,
-            self.geo_params['span'], spand, self.geo_params['yshear'], ysheard,
-            self.geo_params['dihedral'], dihedrald, self.geo_params['zshear'], zsheard,
-            self.geo_params['twist'], twistd, self.symmetry, self.rotate_x)
-
-        if mode == 'rev':
-            taperb, chordb, sweepb, xshearb, spanb, yshearb, dihedralb, zshearb, twistb, mesh = \
-            OAS_API.oas_api.manipulate_mesh_b(mesh,
-            self.geo_params['taper'], self.geo_params['chord'],
-            self.geo_params['sweep'], self.geo_params['xshear'],
-            self.geo_params['span'], self.geo_params['yshear'],
-            self.geo_params['dihedral'], self.geo_params['zshear'],
-            self.geo_params['twist'], self.symmetry, self.rotate_x, dresids['mesh'])
-
-            if 'sweep' in dparams:
-                dparams['sweep'] = sweepb
-            if 'twist' in dparams:
-                dparams['twist'] = twistb
-            if 'chord' in dparams:
-                dparams['chord'] = chordb
-            if 'dihedral' in dparams:
-                dparams['dihedral'] = dihedralb
-            if 'taper' in dparams:
-                dparams['taper'] = taperb
-            if 'xshear' in dparams:
-                dparams['xshear'] = xshearb
-            if 'yshear' in dparams:
-                dparams['yshear'] = yshearb
-            if 'zshear' in dparams:
-                dparams['zshear'] = zshearb
-            if 'span' in dparams:
-                dparams['span'] = spanb
+        unknowns['chords_fem'] = ch_fem
+        unknowns['twist_fem'] = twist_fem
+        
+    # def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode):
+    #     mesh = self.mesh.copy()
+    # 
+    #     # We actually use the values in self.geo_params to modify the mesh,
+    #     # but we update self.geo_params using the OpenMDAO params here.
+    #     # This makes the geometry manipulation process work for any combination
+    #     # of design variables without having special logic.
+    #     self.geo_params.update(params)
+    # 
+    #     if mode == 'fwd':
+    # 
+    #         # We don't know which parameters will be used for a given case
+    #         # so we must check
+    #         if 'sweep' in dparams:
+    #             sweepd = dparams['sweep']
+    #         else:
+    #             sweepd = 0.
+    #         if 'twist' in dparams:
+    #             twistd = dparams['twist']
+    #         else:
+    #             twistd = np.zeros(self.geo_params['twist'].shape)
+    #         if 'chord' in dparams:
+    #             chordd = dparams['chord']
+    #         else:
+    #             chordd = np.zeros(self.geo_params['chord'].shape)
+    #         if 'dihedral' in dparams:
+    #             dihedrald = dparams['dihedral']
+    #         else:
+    #             dihedrald = 0.
+    #         if 'taper' in dparams:
+    #             taperd = dparams['taper']
+    #         else:
+    #             taperd = 0.
+    #         if 'xshear' in dparams:
+    #             xsheard = dparams['xshear']
+    #         else:
+    #             xsheard = np.zeros(self.geo_params['xshear'].shape)
+    #         if 'yshear' in dparams:
+    #             ysheard = dparams['yshear']
+    #         else:
+    #             ysheard = np.zeros(self.geo_params['yshear'].shape)
+    #         if 'zshear' in dparams:
+    #             zsheard = dparams['zshear']
+    #         else:
+    #             zsheard = np.zeros(self.geo_params['zshear'].shape)
+    #         if 'span' in dparams:
+    #             spand = dparams['span']
+    #         else:
+    #             spand = 0.
+    # 
+    #         mesh, dresids['mesh'] = OAS_API.oas_api.manipulate_mesh_d(mesh,
+    #         self.geo_params['taper'], taperd, self.geo_params['chord'], chordd,
+    #         self.geo_params['sweep'], sweepd, self.geo_params['xshear'], xsheard,
+    #         self.geo_params['span'], spand, self.geo_params['yshear'], ysheard,
+    #         self.geo_params['dihedral'], dihedrald, self.geo_params['zshear'], zsheard,
+    #         self.geo_params['twist'], twistd, self.symmetry, self.rotate_x)
+    # 
+    #     if mode == 'rev':
+    #         taperb, chordb, sweepb, xshearb, spanb, yshearb, dihedralb, zshearb, twistb, mesh = \
+    #         OAS_API.oas_api.manipulate_mesh_b(mesh,
+    #         self.geo_params['taper'], self.geo_params['chord'],
+    #         self.geo_params['sweep'], self.geo_params['xshear'],
+    #         self.geo_params['span'], self.geo_params['yshear'],
+    #         self.geo_params['dihedral'], self.geo_params['zshear'],
+    #         self.geo_params['twist'], self.symmetry, self.rotate_x, dresids['mesh'])
+    # 
+    #         if 'sweep' in dparams:
+    #             dparams['sweep'] = sweepb
+    #         if 'twist' in dparams:
+    #             dparams['twist'] = twistb
+    #         if 'chord' in dparams:
+    #             dparams['chord'] = chordb
+    #         if 'dihedral' in dparams:
+    #             dparams['dihedral'] = dihedralb
+    #         if 'taper' in dparams:
+    #             dparams['taper'] = taperb
+    #         if 'xshear' in dparams:
+    #             dparams['xshear'] = xshearb
+    #         if 'yshear' in dparams:
+    #             dparams['yshear'] = yshearb
+    #         if 'zshear' in dparams:
+    #             dparams['zshear'] = zshearb
+    #         if 'span' in dparams:
+    #             dparams['span'] = spanb
 
 class MonotonicConstraint(Component):
     """ Produce a constraint that is violated if the chord lengths of the wing

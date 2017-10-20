@@ -24,7 +24,6 @@ import numpy as np
 # =============================================================================
 from openmdao.api import IndepVarComp, Problem, Group, ScipyOptimizer, Newton, ScipyGMRES, LinearGaussSeidel, NLGaussSeidel, SqliteRecorder, profile, CaseReader, DirectSolver
 from openmdao.api import view_model
-from openmdao.solvers.gs_newton import HybridGSNewton
 from six import iteritems
 
 # =============================================================================
@@ -33,7 +32,7 @@ from six import iteritems
 from .geometry import GeometryMesh, Bspline, gen_crm_mesh, gen_rect_mesh, MonotonicConstraint
 from .transfer import TransferDisplacements, TransferLoads
 from .vlm import VLMStates, VLMFunctionals, VLMGeometry
-from .spatialbeam import SpatialBeamStates, SpatialBeamFunctionals, SpatialBeamSetup, radii
+from .spatialbeam import SpatialBeamStates, SpatialBeamFunctionals, SpatialBeamSetup, chords_fem
 from .materials import MaterialsTube
 from .functionals import TotalPerformance, TotalAeroPerformance, FunctionalBreguetRange, FunctionalEquilibrium
 # from .gs_newton import HybridGSNewton
@@ -233,15 +232,19 @@ class OASProblem(object):
                     'yshear_cp' : None,
                     'zshear_cp' : None,
                     'thickness_cp' : None,
-                    'radius_cp' : None,
+                    'skinthickness_cp' : None,
+                    'sparthickness_cp' : None,
+                    # 'radius_cp' : None,
 
                     # Geometric variables. The user generally does not need
                     # to change these geometry variables. This is simply
                     # a list of possible geometry variables that is later
                     # filtered down based on which are active.
+                    # 'geo_vars' : ['sweep', 'dihedral', 'twist_cp', 'xshear_cp', 'yshear_cp',
+                    #     'zshear_cp', 'span', 'chord_cp', 'taper', 'thickness_cp', 'radius_cp'],
+                        
                     'geo_vars' : ['sweep', 'dihedral', 'twist_cp', 'xshear_cp', 'yshear_cp',
-                        'zshear_cp', 'span', 'chord_cp', 'taper', 'thickness_cp', 'radius_cp'],
-
+                        'zshear_cp', 'span', 'chord_cp', 'taper', 'thickness_cp', 'sparthickness_cp', 'skinthickness_cp'],
                     # Aerodynamic performance of the lifting surface at
                     # an angle of attack of 0 (alpha=0).
                     # These CL0 and CD0 values are added to the CL and CD
@@ -266,11 +269,23 @@ class OASProblem(object):
                     'fem_origin' : 0.35,    # normalized chordwise location of the spar
                     'loads' : None,         # [N] allow the user to input loads
                     'disp' : None,          # [m] nodal displacements of the FEM model
+                    'strength_factor_for_upper_skin' : 1., # If strength of upper skin is greater than the material props, use factor greater than 1.
 
                     # Constraints
                     'exact_failure_constraint' : False, # if false, use KS function
                     'monotonic_con' : None, # add monotonic constraint to the given
                                             # distributed variable. Ex. 'chord_cp'
+                                            
+                    'data_x_upper' : np.array([0.15,   0.17,   0.2,    0.22,   0.25,   0.27,   0.3,    0.33,   0.35,   0.38,   0.4,
+                                                0.43,   0.45,   0.48,   0.5,    0.53,   0.55,   0.57,   0.6,    0.62,   0.65,]),
+                    'data_x_lower' : np.array([ 0.15,   0.17,   0.2,    0.22,   0.25,   0.28,   0.3,    0.32,   0.35,   0.37,   0.4,
+                                                0.42,   0.45,   0.48,   0.5,    0.53,   0.55,   0.58,   0.6,    0.63,   0.65,]),
+                    'data_y_upper' : np.array([  0.0585,  0.0606,  0.0632,  0.0646,  0.0664,  0.0673,  0.0685,
+                                                0.0692,  0.0696,  0.0698,  0.0697,  0.0695,  0.0692,  0.0684,  0.0678,  0.0666,
+                                                0.0656,  0.0645,  0.0625,  0.061,   0.0585]),
+                    'data_y_lower' : np.array([-0.0585, -0.0606, -0.0633, -0.0647, -0.0666, -0.068,  -0.0687, 
+                                                -0.0692, -0.0696, -0.0696, -0.0692, -0.0688, -0.0676, -0.0657, -0.0644, -0.0614, 
+                                                -0.0588, -0.0543, -0.0509, -0.0451, -0.041]),
                     }
         return defaults
 
@@ -350,7 +365,8 @@ class OASProblem(object):
 
         # We need to initialize some variables to ones and some others to zeros.
         # Here we define the lists for each case.
-        ones_list = ['chord_cp', 'thickness_cp', 'radius_cp']
+        # ones_list = ['chord_cp', 'thickness_cp', 'radius_cp']
+        ones_list = ['chord_cp', 'thickness_cp', 'sparthickness_cp', 'skinthickness_cp']
         zeros_list = ['twist_cp', 'xshear_cp', 'yshear_cp', 'zshear_cp']
         surf_dict['bsp_vars'] = ones_list + zeros_list
 
@@ -398,11 +414,12 @@ class OASProblem(object):
         surf_dict['num_y'] = num_y
         surf_dict['mesh'] = mesh
 
-        radius = radii(mesh, surf_dict['t_over_c'])
-        surf_dict['radius'] = radius
+        # radius = radii(mesh, surf_dict['t_over_c'])
+        chord_fem = chords_fem(mesh)
+        # surf_dict['radius'] = radius
 
         # Set initial thicknesses
-        surf_dict['thickness'] = radius / 10
+        surf_dict['thickness'] = chord_fem / 10
 
         # We now loop through the possible bspline variables and populate
         # the 'initial_geo' list with the variables that the geometry
@@ -433,6 +450,8 @@ class OASProblem(object):
 
         if 'thickness_cp' not in surf_dict['initial_geo']:
             surf_dict['thickness_cp'] *= np.max(surf_dict['thickness'])
+            surf_dict['sparthickness_cp'] *= np.max(surf_dict['thickness'])
+            surf_dict['skinthickness_cp'] *= np.max(surf_dict['thickness'])
 
         if surf_dict['loads'] is None:
             # Set default loads at the tips
@@ -471,10 +490,11 @@ class OASProblem(object):
             from openmdao.api import pyOptSparseDriver
             self.prob.driver = pyOptSparseDriver()
             if self.prob_dict['optimizer'] == 'SNOPT':
+                print("POS SNOPT")
                 self.prob.driver.options['optimizer'] = "SNOPT"
-                self.prob.driver.opt_settings = {'Major optimality tolerance': 1.0e-8,
-                                                 'Major feasibility tolerance': 1.0e-8,
-                                                 'Major iterations limit':400,
+                self.prob.driver.opt_settings = {'Major optimality tolerance': 1e-4,
+                                                 'Major feasibility tolerance': 1e-4,
+                                                 'Major iterations limit':50,
                                                  'Minor iterations limit':2000,
                                                  'Iterations limit':1000
                                                  }
@@ -497,11 +517,13 @@ class OASProblem(object):
                                                 'printfile':1
                                                 }
             elif self.prob_dict['optimizer'] == 'SLSQP':
+                print("POS SLSQP")
                 self.prob.driver.options['optimizer'] = 'SLSQP'
                 self.prob.driver.opt_settings = {'ACC' : 1e-10
                                                 }
 
         except:  # Use Scipy SLSQP optimizer if pyOptSparse not installed
+            print("Scipy SLSQP!")
             self.prob.driver = ScipyOptimizer()
             self.prob.driver.options['optimizer'] = 'SLSQP'
             self.prob.driver.options['disp'] = True
@@ -697,7 +719,8 @@ class OASProblem(object):
             for var in surface['bsp_vars']:
                 if var in desvar_names or var in surface['initial_geo'] or 'thickness' in var:
                     n_pts = surface['num_y']
-                    if var in ['thickness_cp', 'radius_cp']:
+                    # if var in ['thickness_cp', 'radius_cp']:
+                    if var in ['thickness_cp', 'skinthickness_cp', 'sparthickness_cp']:
                         n_pts -= 1
                     trunc_var = var.split('_')[0]
                     tmp_group.add(trunc_var + '_bsp',
@@ -775,7 +798,8 @@ class OASProblem(object):
             for var in surface['bsp_vars']:
                 if var in desvar_names or var in surface['initial_geo']:
                     n_pts = surface['num_y']
-                    if var in ['thickness_cp', 'radius_cp']:
+                    # if var in ['thickness_cp', 'radius_cp']:
+                    if var in ['thickness_cp', 'sparthickness_cp', 'skinthickness_cp']:
                         n_pts -= 1
                     trunc_var = var.split('_')[0]
                     tmp_group.add(trunc_var + '_bsp',
@@ -933,7 +957,8 @@ class OASProblem(object):
             for var in surface['bsp_vars']:
                 if var in desvar_names or var in surface['initial_geo'] or 'thickness' in var:
                     n_pts = surface['num_y']
-                    if var in ['thickness_cp', 'radius_cp']:
+                    # if var in ['thickness_cp', 'radius_cp']:
+                    if var in ['thickness_cp', 'sparthickness_cp', 'skinthickness_cp']:
                         n_pts -= 1
                     trunc_var = var.split('_')[0]
                     tmp_group.add(trunc_var + '_bsp',
@@ -1027,9 +1052,20 @@ class OASProblem(object):
             root.connect(name[:-1] + '.mesh', 'coupled.' + name[:-1] + '.mesh')
 
             # Connect performance calculation variables
-            root.connect(name[:-1] + '.radius', name + 'perf.radius')
+            # root.connect(name[:-1] + '.radius', name + 'perf.radius')
             root.connect(name[:-1] + '.A', name + 'perf.A')
+            root.connect(name[:-1] + '.A_enc', name + 'perf.A_enc')
+            root.connect(name[:-1] + '.A_spar', name + 'perf.A_spar')
+            root.connect(name[:-1] + '.Iy', name + 'perf.Iy')
+            root.connect(name[:-1] + '.Iz', name + 'perf.Iz')
+            root.connect(name[:-1] + '.J', name + 'perf.J')
+            root.connect(name[:-1] + '.htop', name + 'perf.htop')
+            root.connect(name[:-1] + '.hbottom', name + 'perf.hbottom')
+            root.connect(name[:-1] + '.hleft', name + 'perf.hleft')
+            root.connect(name[:-1] + '.hright', name + 'perf.hright')
             root.connect(name[:-1] + '.thickness', name + 'perf.thickness')
+            root.connect(name[:-1] + '.sparthickness', name + 'perf.sparthickness')
+            root.connect(name[:-1] + '.skinthickness', name + 'perf.skinthickness')
 
             # Connection performance functional variables
             root.connect(name + 'perf.structural_weight', 'total_perf.' + name + 'structural_weight')
@@ -1083,7 +1119,7 @@ class OASProblem(object):
         if solver_combo == 'gs_wo_aitken':
             coupled.ln_solver = ScipyGMRES()
             coupled.ln_solver.options['maxiter'] = 200
-            coupled.ln_solver.options['atol'] = 1e-10
+            coupled.ln_solver.options['atol'] =1e-12
             coupled.ln_solver.preconditioner = LinearGaussSeidel()
             coupled.ln_solver.preconditioner.options['maxiter'] = 1
             # coupled.aero_states.ln_solver = LinearGaussSeidel()
@@ -1093,7 +1129,7 @@ class OASProblem(object):
         if solver_combo == 'gs_w_aitken':
             coupled.ln_solver = ScipyGMRES()
             coupled.ln_solver.options['maxiter'] = 200
-            coupled.ln_solver.options['atol'] = 1e-10
+            coupled.ln_solver.options['atol'] =1e-12
             coupled.ln_solver.preconditioner = LinearGaussSeidel()
             coupled.ln_solver.preconditioner.options['maxiter'] = 1
             # coupled.aero_states.ln_solver = LinearGaussSeidel()
@@ -1107,14 +1143,13 @@ class OASProblem(object):
 
             coupled.ln_solver = ScipyGMRES()
             coupled.ln_solver.options['maxiter'] = 200
+            coupled.ln_solver.options['atol'] =1e-12
             coupled.ln_solver.preconditioner = LinearGaussSeidel()
             coupled.ln_solver.preconditioner.options['maxiter'] = 1
-            coupled.ln_solver.options['atol'] = 1e-10
-            
             # coupled.aero_states.ln_solver = LinearGaussSeidel()
             coupled.nl_solver = Newton()
-            coupled.nl_solver.options['maxiter'] = 20
-            coupled.nl_solver.options['solve_subsystems'] = False
+            coupled.nl_solver.options['maxiter'] = 30
+            coupled.nl_solver.options['solve_subsystems'] = True
             
             # print(coupled.nl_solver.options['iprint'])
             # print(coupled.ln_solver.options['iprint'])
@@ -1124,9 +1159,10 @@ class OASProblem(object):
         if solver_combo == 'newton_direct':
             
             coupled.ln_solver = DirectSolver()            
-            coupled.aero_states.ln_solver = LinearGaussSeidel()
+            # coupled.aero_states.ln_solver = LinearGaussSeidel()
             coupled.nl_solver = Newton()
-            coupled.nl_solver.options['maxiter'] = 200
+            coupled.nl_solver.options['maxiter'] = 10
+            coupled.nl_solver.options['solve_subsystems'] = True
             
         if solver_combo == 'hybrid_GSN':
             
@@ -1134,13 +1170,13 @@ class OASProblem(object):
             
             coupled.ln_solver = ScipyGMRES()
             coupled.ln_solver.options['maxiter'] = 200
-            coupled.ln_solver.options['atol'] = 1e-10
+            coupled.ln_solver.options['atol'] =1e-12
             coupled.ln_solver.preconditioner = LinearGaussSeidel()
             coupled.ln_solver.preconditioner.options['maxiter'] = 1
             
             coupled.nl_solver = HybridGSNewton()
             coupled.nl_solver.options['maxiter_nlgs'] = 1000
-            coupled.nl_solver.options['maxiter_newton'] = 20
+            coupled.nl_solver.options['maxiter_newton'] = 30
             
             coupled.nl_solver.nlgs.options['use_aitken'] = True
             coupled.nl_solver.nlgs.options['aitken_alpha_min'] = .01
@@ -1152,7 +1188,7 @@ class OASProblem(object):
             coupled.nl_solver.newton.ln_solver.preconditioner = LinearGaussSeidel()
             coupled.nl_solver.newton.ln_solver.preconditioner.options['maxiter'] = 1
             coupled.nl_solver.newton.ln_solver.preconditioner.options['iprint'] = 0
-            coupled.nl_solver.newton.ln_solver.options['atol'] = 1e-10
+            coupled.nl_solver.newton.ln_solver.options['atol'] =1e-12
             
             # coupled.aero_states.ln_solver = LinearGaussSeidel()
 

@@ -45,7 +45,11 @@ class TransferDisplacements(Component):
 
         self.ny = surface['num_y']
         self.nx = surface['num_x']
-        self.fem_origin = surface['fem_origin']
+        # self.fem_origin = surface['fem_origin']
+        # self.fem_origin = (surface['data_x_upper'][0] + surface['data_x_upper'][-1]) / 2.
+        self.fem_origin = (surface['data_x_upper'][0] *(surface['data_y_upper'][0]-surface['data_y_lower'][0]) + \
+        surface['data_x_upper'][-1]*(surface['data_y_upper'][-1]-surface['data_y_lower'][-1])) / \
+        ( (surface['data_y_upper'][0]-surface['data_y_lower'][0]) + (surface['data_y_upper'][-1]-surface['data_y_lower'][-1]))
 
         self.add_param('mesh', val=np.zeros((self.nx, self.ny, 3), dtype=data_type))
         self.add_param('disp', val=np.zeros((self.ny, 6), dtype=data_type))
@@ -59,7 +63,12 @@ class TransferDisplacements(Component):
         disp = params['disp']
 
         # Get the location of the spar within the wing and save as w
-        w = self.surface['fem_origin']
+        # w = self.surface['fem_origin']
+        # w = (self.surface['data_x_upper'][0] + self.surface['data_x_upper'][-1]) / 2.
+        surface = self.surface
+        w = (surface['data_x_upper'][0] *(surface['data_y_upper'][0]-surface['data_y_lower'][0]) + \
+        surface['data_x_upper'][-1]*(surface['data_y_upper'][-1]-surface['data_y_lower'][-1])) / \
+        ( (surface['data_y_upper'][0]-surface['data_y_lower'][0]) + (surface['data_y_upper'][-1]-surface['data_y_lower'][-1]))
 
         # Run Fortran if possible
         if fortran_flag:
@@ -105,7 +114,12 @@ class TransferDisplacements(Component):
         mesh = params['mesh']
         disp = params['disp']
 
-        w = self.surface['fem_origin']
+        # w = self.surface['fem_origin']
+        # w = (self.surface['data_x_upper'][0] + self.surface['data_x_upper'][-1]) / 2.
+        surface = self.surface
+        w = (surface['data_x_upper'][0] *(surface['data_y_upper'][0]-surface['data_y_lower'][0]) + \
+        surface['data_x_upper'][-1]*(surface['data_y_upper'][-1]-surface['data_y_lower'][-1])) / \
+        ( (surface['data_y_upper'][0]-surface['data_y_lower'][0]) + (surface['data_y_upper'][-1]-surface['data_y_lower'][-1]))
 
         if mode == 'fwd':
             a, b = OAS_API.oas_api.transferdisplacements_d(mesh, dparams['mesh'], disp, dparams['disp'], w)
@@ -146,7 +160,11 @@ class TransferLoads(Component):
 
         self.ny = surface['num_y']
         self.nx = surface['num_x']
-        self.fem_origin = surface['fem_origin']
+        # self.fem_origin = surface['fem_origin']
+        # self.fem_origin = (surface['data_x_upper'][0] + surface['data_x_upper'][-1]) / 2.
+        self.fem_origin = (surface['data_x_upper'][0] *(surface['data_y_upper'][0]-surface['data_y_lower'][0]) + \
+        surface['data_x_upper'][-1]*(surface['data_y_upper'][-1]-surface['data_y_lower'][-1])) / \
+        ( (surface['data_y_upper'][0]-surface['data_y_lower'][0]) + (surface['data_y_upper'][-1]-surface['data_y_lower'][-1]))
 
         self.add_param('def_mesh', val=np.zeros((self.nx, self.ny, 3), dtype=complex))
         self.add_param('sec_forces', val=np.zeros((self.nx-1, self.ny-1, 3),
