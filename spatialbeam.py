@@ -774,25 +774,6 @@ class SpatialBeamVonMisesTube(Component):
             vonmises[ielem, 2] = np.sqrt((left_bending_stress + axial_stress)**2 + 3*(torsion_stress-vertical_shear)**2) 
             vonmises[ielem, 3] = np.sqrt((right_bending_stress + axial_stress)**2 + 3*(torsion_stress+vertical_shear)**2) / self.tssf
 
-    # def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode):
-    # 
-    #     radius = params['radius'].real
-    #     disp = params['disp'].real
-    #     nodes = params['nodes'].real
-    #     vonmises = unknowns['vonmises'].real
-    #     E = self.E
-    #     G = self.G
-    #     x_gl = self.x_gl
-    # 
-    #     if mode == 'fwd':
-    #         _, vonmisesd = OAS_API.oas_api.calc_vonmises_d(nodes, dparams['nodes'], radius, dparams['radius'], disp, dparams['disp'], E, G, x_gl)
-    #         dresids['vonmises'] += vonmisesd
-    # 
-    #     if mode == 'rev':
-    #         nodesb, radiusb, dispb = OAS_API.oas_api.calc_vonmises_b(nodes, radius, disp, E, G, x_gl, vonmises, dresids['vonmises'])
-    #         dparams['nodes'] += nodesb
-    #         dparams['radius'] += radiusb
-    #         dparams['disp'] += dispb
 
 class SpatialBeamFailureKS(Component):
     """
