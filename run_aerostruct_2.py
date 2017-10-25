@@ -1,12 +1,7 @@
 """ Example runscript to perform aerostructural optimization.
 
-Call as `python run_aerostruct.py 0` to run a single analysis, or
-call as `python run_aerostruct.py 1` to perform optimization.
-
-Call as `python run_aerostruct.py 0m` to run a single analysis with
-multiple surfaces, or
-call as `python run_aerostruct.py 1m` to perform optimization with
-multiple surfaces.
+Call as `python run_aerostruct_2.py 0` to run a single analysis, or
+call as `python run_aerostruct_2.py 1` to perform optimization.
 
 """
 
@@ -31,9 +26,9 @@ if __name__ == "__main__":
     twist_index = int(sys.argv[1]) # Use input for twist starting point    
 
     for num_y in [51]:
-        for index1 in [1]:
+        for index1 in [2]:
     
-            solver_options = ['gs_wo_aitken', 'gs_w_aitken', 'hybrid_GSN', 'newton_gmres', 'newton_direct']
+            solver_options = ['gs_wo_aitken', 'gs_w_aitken', 'newton_gmres', 'newton_direct']
             solver_combo = solver_options[index1] 
             # solver_combo = solver_options[2] 
             solver_atol = 1e-6
@@ -113,5 +108,5 @@ if __name__ == "__main__":
             # print(OAS_prob.prob['wing_perf.disp'])
             print(OAS_prob.prob['wing_perf.structural_weight'])
             print("Span", OAS_prob.prob['wing.span'],"m")
-            print("Sweep", OAS_prob.prob['wing.sweep'],"m")
+            print("Sweep", OAS_prob.prob['wing.sweep'])
             

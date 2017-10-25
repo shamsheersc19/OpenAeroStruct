@@ -492,8 +492,8 @@ class OASProblem(object):
             if self.prob_dict['optimizer'] == 'SNOPT':
                 print("POS SNOPT")
                 self.prob.driver.options['optimizer'] = "SNOPT"
-                self.prob.driver.opt_settings = {'Major optimality tolerance': 1e-4,
-                                                 'Major feasibility tolerance': 1e-4,
+                self.prob.driver.opt_settings = {'Major optimality tolerance': 1e-6,
+                                                 'Major feasibility tolerance': 1e-6,
                                                  'Major iterations limit':50,
                                                  'Minor iterations limit':2000,
                                                  'Iterations limit':1000
@@ -1163,34 +1163,7 @@ class OASProblem(object):
             coupled.nl_solver = Newton()
             coupled.nl_solver.options['maxiter'] = 10
             coupled.nl_solver.options['solve_subsystems'] = True
-            
-        if solver_combo == 'hybrid_GSN':
-            
-            print("CONFIRM HYBRID")
-            
-            coupled.ln_solver = ScipyGMRES()
-            coupled.ln_solver.options['maxiter'] = 200
-            coupled.ln_solver.options['atol'] =1e-12
-            coupled.ln_solver.preconditioner = LinearGaussSeidel()
-            coupled.ln_solver.preconditioner.options['maxiter'] = 1
-            
-            coupled.nl_solver = HybridGSNewton()
-            coupled.nl_solver.options['maxiter_nlgs'] = 1000
-            coupled.nl_solver.options['maxiter_newton'] = 30
-            
-            coupled.nl_solver.nlgs.options['use_aitken'] = True
-            coupled.nl_solver.nlgs.options['aitken_alpha_min'] = .01
-            coupled.nl_solver.nlgs.options['aitken_alpha_max'] = 1.5
-            
-            coupled.nl_solver.newton.ln_solver = ScipyGMRES()
-            # coupled.nl_solver.newton.ln_solver.options['iprint'] = 2
-            coupled.nl_solver.newton.ln_solver.options['maxiter'] = 200
-            coupled.nl_solver.newton.ln_solver.preconditioner = LinearGaussSeidel()
-            coupled.nl_solver.newton.ln_solver.preconditioner.options['maxiter'] = 1
-            coupled.nl_solver.newton.ln_solver.preconditioner.options['iprint'] = 0
-            coupled.nl_solver.newton.ln_solver.options['atol'] =1e-12
-            
-            # coupled.aero_states.ln_solver = LinearGaussSeidel()
+
 
         coupled.nl_solver.options['atol'] = self.prob_dict['solver_atol']
         coupled.nl_solver.options['rtol'] = 1e-100
