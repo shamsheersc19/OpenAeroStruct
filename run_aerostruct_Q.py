@@ -44,12 +44,12 @@ if __name__ == "__main__":
                 #  'force_fd' : True,
                 'optimizer': 'SNOPT',
                  'cg' : np.array([30., 0., 5.]),
-                 'solver_combo' : solver_options[1], # Choose a solver option from the list.
+                 'solver_combo' : solver_options[0], # Choose a solver option from the list.
                  'solver_atol' : solver_atol,
                  'print_level' : 1,
                  'Re' : 12e6,             # Reynolds number
                  'reynolds_length' : MAC, # characteristic Reynolds length
-                 'alpha' : 3.,            # [degrees] angle of attack
+                 'alpha' : 2.,            # [degrees] angle of attack
                  'M' : 0.5,              # Mach number at cruise
                  'rho' : 0.57,            # [kg/m^3] air density at 24,000 ft
                  'a' : 311.,              # [m/s] speed of sound at 24,000 ft

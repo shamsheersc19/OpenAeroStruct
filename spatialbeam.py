@@ -267,13 +267,18 @@ class AssembleK(Component):
         if not fortran_flag:
             self.deriv_options['type'] = 'cs'
             self.deriv_options['form'] = 'central'
+        
+        self.surface = surface
 
     def solve_nonlinear(self, params, unknowns, resids):
 
         # Find constrained nodes based on closeness to central point
         nodes = params['nodes']
-        dist = nodes - np.array([5., 0, 0])
-        idx = (np.linalg.norm(dist, axis=1)).argmin()
+        symmetry = self.surface['symmetry']
+        if symmetry:
+            idx = self.ny - 1
+        else:
+            idx = (self.ny - 1) // 2
         self.cons = idx
 
         self.K = \
@@ -293,8 +298,11 @@ class AssembleK(Component):
 
         # Find constrained nodes based on closeness to specified cg point
         nodes = params['nodes']
-        dist = nodes - np.array([5., 0, 0])
-        idx = (np.linalg.norm(dist, axis=1)).argmin()
+        symmetry = self.surface['symmetry']
+        if symmetry:
+            idx = self.ny - 1
+        else:
+            idx = (self.ny - 1) // 2
         self.cons = idx
 
         A = params['A']

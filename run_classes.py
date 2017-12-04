@@ -36,7 +36,7 @@ from .spatialbeam import SpatialBeamStates, SpatialBeamFunctionals, SpatialBeamS
 from .materials import MaterialsTube
 from .functionals import TotalPerformance, TotalAeroPerformance, FunctionalBreguetRange, FunctionalEquilibrium
 # from .gs_newton import HybridGSNewton
-from openmdao.solvers.gs_newton import HybridGSNewton
+# from openmdao.solvers.gs_newton import HybridGSNewton
 
 try:
     import OAS_API

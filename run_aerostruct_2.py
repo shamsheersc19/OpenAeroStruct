@@ -76,7 +76,8 @@ if __name__ == "__main__":
                         'yield' : 450.e6/ 2.5 / 1.5, # [Pa] yield stress divided by 2.5 for limiting case
                         'mrho' : 2.8e3,          # [kg/m^3] material density
                         'fem_origin' : 0.4,
-                        'strength_factor_for_upper_skin' : 1.0
+                        'strength_factor_for_upper_skin' : 1.0,
+                        'sweep' : -10.
                         }
 
             # Add the specified wing surface to the problem
