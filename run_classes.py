@@ -24,7 +24,6 @@ import numpy as np
 # =============================================================================
 from openmdao.api import IndepVarComp, Problem, Group, ScipyOptimizer, Newton, ScipyGMRES, LinearGaussSeidel, NLGaussSeidel, SqliteRecorder, profile, CaseReader, DirectSolver
 from openmdao.api import view_model
-from openmdao.solvers.gs_newton import HybridGSNewton
 from six import iteritems
 
 # =============================================================================
@@ -38,6 +37,11 @@ from .materials import MaterialsTube
 from .functionals import TotalPerformance, TotalAeroPerformance, FunctionalBreguetRange, FunctionalEquilibrium
 # from .gs_newton import HybridGSNewton
 from openmdao.solvers.gs_newton import HybridGSNewton
+
+try:
+    from openmdao.solvers.gs_then_newton import GSthenNewton
+except:
+    pass
 
 try:
     import OAS_API
@@ -471,9 +475,10 @@ class OASProblem(object):
             from openmdao.api import pyOptSparseDriver
             self.prob.driver = pyOptSparseDriver()
             if self.prob_dict['optimizer'] == 'SNOPT':
+                print("SNOPT IS HAPPEN!!!")
                 self.prob.driver.options['optimizer'] = "SNOPT"
-                self.prob.driver.opt_settings = {'Major optimality tolerance': 1.0e-8,
-                                                 'Major feasibility tolerance': 1.0e-8,
+                self.prob.driver.opt_settings = {'Major optimality tolerance': 1.0e-6,
+                                                 'Major feasibility tolerance': 1.0e-6,
                                                  'Major iterations limit':400,
                                                  'Minor iterations limit':2000,
                                                  'Iterations limit':1000
@@ -497,11 +502,13 @@ class OASProblem(object):
                                                 'printfile':1
                                                 }
             elif self.prob_dict['optimizer'] == 'SLSQP':
+                print("POS SLSQP is being used!!!")
                 self.prob.driver.options['optimizer'] = 'SLSQP'
                 self.prob.driver.opt_settings = {'ACC' : 1e-10
                                                 }
 
         except:  # Use Scipy SLSQP optimizer if pyOptSparse not installed
+            print("Scipy SLSQP is being used!!!")
             self.prob.driver = ScipyOptimizer()
             self.prob.driver.options['optimizer'] = 'SLSQP'
             self.prob.driver.options['disp'] = True
@@ -1078,12 +1085,17 @@ class OASProblem(object):
         # if self.prob_dict['print_level']:
         #     coupled.nl_solver.options['iprint'] = 1
         
+        #===========================================================
+        # Here are the solver options used for the automated 
+        # selection paper
+        #===========================================================
+        
         solver_combo = self.prob_dict['solver_combo']
 
         if solver_combo == 'gs_wo_aitken':
             coupled.ln_solver = ScipyGMRES()
             coupled.ln_solver.options['maxiter'] = 200
-            coupled.ln_solver.options['atol'] = 1e-10
+            coupled.ln_solver.options['atol'] =1e-12
             coupled.ln_solver.preconditioner = LinearGaussSeidel()
             coupled.ln_solver.preconditioner.options['maxiter'] = 1
             # coupled.aero_states.ln_solver = LinearGaussSeidel()
@@ -1093,7 +1105,7 @@ class OASProblem(object):
         if solver_combo == 'gs_w_aitken':
             coupled.ln_solver = ScipyGMRES()
             coupled.ln_solver.options['maxiter'] = 200
-            coupled.ln_solver.options['atol'] = 1e-10
+            coupled.ln_solver.options['atol'] =1e-12
             coupled.ln_solver.preconditioner = LinearGaussSeidel()
             coupled.ln_solver.preconditioner.options['maxiter'] = 1
             # coupled.aero_states.ln_solver = LinearGaussSeidel()
@@ -1107,14 +1119,13 @@ class OASProblem(object):
 
             coupled.ln_solver = ScipyGMRES()
             coupled.ln_solver.options['maxiter'] = 200
+            coupled.ln_solver.options['atol'] =1e-12
             coupled.ln_solver.preconditioner = LinearGaussSeidel()
             coupled.ln_solver.preconditioner.options['maxiter'] = 1
-            coupled.ln_solver.options['atol'] = 1e-10
-            
             # coupled.aero_states.ln_solver = LinearGaussSeidel()
             coupled.nl_solver = Newton()
-            coupled.nl_solver.options['maxiter'] = 20
-            coupled.nl_solver.options['solve_subsystems'] = False
+            coupled.nl_solver.options['maxiter'] = 15
+            coupled.nl_solver.options['solve_subsystems'] = True
             
             # print(coupled.nl_solver.options['iprint'])
             # print(coupled.ln_solver.options['iprint'])
@@ -1124,9 +1135,10 @@ class OASProblem(object):
         if solver_combo == 'newton_direct':
             
             coupled.ln_solver = DirectSolver()            
-            coupled.aero_states.ln_solver = LinearGaussSeidel()
+            # coupled.aero_states.ln_solver = LinearGaussSeidel()
             coupled.nl_solver = Newton()
-            coupled.nl_solver.options['maxiter'] = 200
+            coupled.nl_solver.options['maxiter'] = 10
+            coupled.nl_solver.options['solve_subsystems'] = True
             
         if solver_combo == 'hybrid_GSN':
             
@@ -1134,13 +1146,13 @@ class OASProblem(object):
             
             coupled.ln_solver = ScipyGMRES()
             coupled.ln_solver.options['maxiter'] = 200
-            coupled.ln_solver.options['atol'] = 1e-10
+            coupled.ln_solver.options['atol'] =1e-12
             coupled.ln_solver.preconditioner = LinearGaussSeidel()
             coupled.ln_solver.preconditioner.options['maxiter'] = 1
             
             coupled.nl_solver = HybridGSNewton()
             coupled.nl_solver.options['maxiter_nlgs'] = 1000
-            coupled.nl_solver.options['maxiter_newton'] = 20
+            coupled.nl_solver.options['maxiter_newton'] = 15
             
             coupled.nl_solver.nlgs.options['use_aitken'] = True
             coupled.nl_solver.nlgs.options['aitken_alpha_min'] = .01
@@ -1152,7 +1164,35 @@ class OASProblem(object):
             coupled.nl_solver.newton.ln_solver.preconditioner = LinearGaussSeidel()
             coupled.nl_solver.newton.ln_solver.preconditioner.options['maxiter'] = 1
             coupled.nl_solver.newton.ln_solver.preconditioner.options['iprint'] = 0
-            coupled.nl_solver.newton.ln_solver.options['atol'] = 1e-10
+            coupled.nl_solver.newton.ln_solver.options['atol'] =1e-12
+            
+            # coupled.aero_states.ln_solver = LinearGaussSeidel()
+            
+        if solver_combo == 'GS_then_Newton':
+            
+            print("CONFIRM GS then Newton")
+            
+            coupled.ln_solver = ScipyGMRES()
+            coupled.ln_solver.options['maxiter'] = 200
+            coupled.ln_solver.options['atol'] =1e-12
+            coupled.ln_solver.preconditioner = LinearGaussSeidel()
+            coupled.ln_solver.preconditioner.options['maxiter'] = 1
+            
+            coupled.nl_solver = GSthenNewton()
+            coupled.nl_solver.options['maxiter_nlgs'] = 10
+            coupled.nl_solver.options['maxiter_newton'] = 15
+            
+            coupled.nl_solver.nlgs.options['use_aitken'] = True
+            coupled.nl_solver.nlgs.options['aitken_alpha_min'] = .01
+            coupled.nl_solver.nlgs.options['aitken_alpha_max'] = 1.5
+            
+            coupled.nl_solver.newton.ln_solver = ScipyGMRES()
+            # coupled.nl_solver.newton.ln_solver.options['iprint'] = 2
+            coupled.nl_solver.newton.ln_solver.options['maxiter'] = 200
+            coupled.nl_solver.newton.ln_solver.preconditioner = LinearGaussSeidel()
+            coupled.nl_solver.newton.ln_solver.preconditioner.options['maxiter'] = 1
+            coupled.nl_solver.newton.ln_solver.preconditioner.options['iprint'] = 0
+            coupled.nl_solver.newton.ln_solver.options['atol'] =1e-12
             
             # coupled.aero_states.ln_solver = LinearGaussSeidel()
 

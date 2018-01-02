@@ -266,7 +266,7 @@ class AssembleK(Component):
 
         # Find constrained nodes based on closeness to central point
         nodes = params['nodes']
-        dist = nodes - np.array([5., 0, 0])
+        dist = nodes - np.array([0, 0, 0]) # Corrected bug
         idx = (np.linalg.norm(dist, axis=1)).argmin()
         self.cons = idx
 
