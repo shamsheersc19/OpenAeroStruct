@@ -1569,14 +1569,18 @@ class ViscousDrag(Component):
             # Sum individual panel drags to get total drag
             self.D_over_q = np.sum(self.d_over_q * widths * FF)
             
+            unknowns['CDv'] = self.D_over_q / S_ref
+            
+            # Wave drag estimate
             avg_cos_sweep = np.mean(cos_sweep)
             MDD = 0.95 / avg_cos_sweep - self.t_over_c / avg_cos_sweep**2 - params['CL'] / (10*avg_cos_sweep**3)
-            Mcrit = MDD - (0.1/80.)**(1./3.)
+            Mcrit = MDD - (0.1 / 80.)**(1./3.)
             if M > Mcrit:
-                CDwave = 20*(M-Mcrit)**4
-                unknowns['CDv'] += CDwave
-            
-            unknowns['CDv'] = self.D_over_q / S_ref
+                CDwave = 20*(M - Mcrit)**4
+                if self.surface['symmetry']:
+                    unknowns['CDv'] += 0.5 * CDwave
+                else:
+                    unknowns['CDv'] += CDwave
             
             
             if self.surface['symmetry']:

@@ -1,4 +1,4 @@
-""" Example runscript to perform aerostructural optimization.
+""" Example runscript to perform aerostructural optimization with Q400 based wing.
 
 Call as `python run_aerostruct_Q.py 0` to run a single analysis, or
 call as `python run_aerostruct_Q.py 1` to perform optimization.
