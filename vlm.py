@@ -1577,10 +1577,7 @@ class ViscousDrag(Component):
             Mcrit = MDD - (0.1 / 80.)**(1./3.)
             if M > Mcrit:
                 CDwave = 20*(M - Mcrit)**4
-                if self.surface['symmetry']:
-                    unknowns['CDv'] += 0.5 * CDwave
-                else:
-                    unknowns['CDv'] += CDwave
+                unknowns['CDv'] += CDwave
             
             
             if self.surface['symmetry']:
