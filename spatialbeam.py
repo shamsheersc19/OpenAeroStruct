@@ -266,7 +266,6 @@ class AssembleK(Component):
 
         if not fortran_flag:
             self.deriv_options['type'] = 'cs'
-            self.deriv_options['form'] = 'central'
         
         self.surface = surface
 

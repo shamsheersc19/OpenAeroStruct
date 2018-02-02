@@ -69,10 +69,10 @@ if __name__ == "__main__":
                  
     # MESH STUFF
     nx = 3  # number of chordwise nodal points
-    ny2 = 15  # number of spanwise nodal points for half wing
+    ny2 = 21  # number of spanwise nodal points for half wing
 
     # Initialize the 3-D mesh object. Chordwise, spanwise, then the 3D coordinates.
-    mesh = np.zeros((nx, ny2, 3))
+    mesh = np.zeros((nx, ny2, 3),dtype=complex)
 
     # Start away from the symm plane and approach the plane as the array indices increase.
     mesh[:, :, 1] = np.linspace(-span/2, 0, ny2)
@@ -130,6 +130,8 @@ if __name__ == "__main__":
     OAS_prob.add_desvar('wing.sparthickness_cp', lower=0.002, upper=0.1, scaler=1e2)
     OAS_prob.add_desvar('wing.skinthickness_cp', lower=0.002, upper=0.1, scaler=1e2)
     OAS_prob.add_constraint('wing_perf.failure', upper=0.)
+    # OAS_prob.add_desvar('wing.span', lower=10., upper=100.)
+    # OAS_prob.add_desvar('wing.sweep', lower=-60., upper=60.)
     OAS_prob.setup()
 
     st = time()

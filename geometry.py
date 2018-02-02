@@ -317,6 +317,16 @@ def taper(mesh, taper_ratio, symmetry):
                 mesh[i, :, ind] = (mesh[i, :, ind] - quarter_chord[:, ind]) * \
                     taper + quarter_chord[:, ind]
 
+def norm_func(vec):
+    """ Function for the norm of a vector that works with complex numbers.
+
+    Parameters
+    ----------
+    vec : numpy array
+    
+    """
+    return np.sqrt(np.sum(vec**2))
+    
 
 class GeometryMesh(Component):
     """
@@ -423,31 +433,31 @@ class GeometryMesh(Component):
         self.rotate_x = True
 
         # if not fortran_flag:
-        self.deriv_options['type'] = 'fd'
-        self.deriv_options['form'] = 'central'
+        self.deriv_options['type'] = 'cs'
+        # self.deriv_options['form'] = 'central'
 
     def solve_nonlinear(self, params, unknowns, resids):
         mesh = self.mesh.copy()
         self.geo_params.update(params)
 
-        if fortran_flag:
-            mesh = OAS_API.oas_api.manipulate_mesh(mesh,
-            self.geo_params['taper'], self.geo_params['chord'],
-            self.geo_params['sweep'], self.geo_params['xshear'],
-            self.geo_params['span'], self.geo_params['yshear'],
-            self.geo_params['dihedral'], self.geo_params['zshear'],
-            self.geo_params['twist'], self.symmetry, self.rotate_x)
-
-        else:
-            taper(mesh, self.geo_params['taper'], self.symmetry)
-            scale_x(mesh, self.geo_params['chord'])
-            sweep(mesh, self.geo_params['sweep'], self.symmetry)
-            shear_x(mesh, self.geo_params['xshear'])
-            stretch(mesh, self.geo_params['span'], self.symmetry)
-            shear_y(mesh, self.geo_params['yshear'])
-            dihedral(mesh, self.geo_params['dihedral'], self.symmetry)
-            shear_z(mesh, self.geo_params['zshear'])
-            rotate(mesh, self.geo_params['twist'], self.symmetry, self.rotate_x)
+        # if fortran_flag:
+        #     mesh = OAS_API.oas_api.manipulate_mesh(mesh,
+        #     self.geo_params['taper'], self.geo_params['chord'],
+        #     self.geo_params['sweep'], self.geo_params['xshear'],
+        #     self.geo_params['span'], self.geo_params['yshear'],
+        #     self.geo_params['dihedral'], self.geo_params['zshear'],
+        #     self.geo_params['twist'], self.symmetry, self.rotate_x)
+        # 
+        # else:
+        taper(mesh, self.geo_params['taper'], self.symmetry)
+        scale_x(mesh, self.geo_params['chord'])
+        sweep(mesh, self.geo_params['sweep'], self.symmetry)
+        shear_x(mesh, self.geo_params['xshear'])
+        stretch(mesh, self.geo_params['span'], self.symmetry)
+        shear_y(mesh, self.geo_params['yshear'])
+        dihedral(mesh, self.geo_params['dihedral'], self.symmetry)
+        shear_z(mesh, self.geo_params['zshear'])
+        rotate(mesh, self.geo_params['twist'], self.symmetry, self.rotate_x)
 
         ch_fem = chords_fem(mesh)
         twist_fem = ch_fem.copy()
@@ -471,7 +481,7 @@ class GeometryMesh(Component):
             temp_vec[0] = 0. # vector along element minus x component
             
             # This is used to get chord length normal to FEM element 
-            cos_theta_fe_sweep = elem_vec.dot(temp_vec) / np.linalg.norm(elem_vec) / np.linalg.norm(temp_vec)
+            cos_theta_fe_sweep = elem_vec.dot(temp_vec) / norm_func(elem_vec) / norm_func(temp_vec)
             ch_fem_temp_val = ch_fem[ielem]
             ch_fem[ielem] = ch_fem[ielem] * cos_theta_fe_sweep
             
@@ -480,7 +490,7 @@ class GeometryMesh(Component):
             temp_mesh_vectors_0 = mesh_vec_0.copy()
             temp_mesh_vectors_0[2] = 0.
             
-            dot_prod_0 = mesh_vec_0.dot(temp_mesh_vectors_0) / np.linalg.norm(mesh_vec_0) / np.linalg.norm(temp_mesh_vectors_0)
+            dot_prod_0 = mesh_vec_0.dot(temp_mesh_vectors_0) / norm_func(mesh_vec_0) / norm_func(temp_mesh_vectors_0)
             
             if dot_prod_0 > 1.:
                 theta_0 = 0. # to prevent nan in case value for arccos is greater than 1 due to machine precision
@@ -491,7 +501,7 @@ class GeometryMesh(Component):
             temp_mesh_vectors_1 = mesh_vec_1.copy()
             temp_mesh_vectors_1[2] = 0.
             
-            dot_prod_1 = mesh_vec_1.dot(temp_mesh_vectors_1) / np.linalg.norm(mesh_vec_1) / np.linalg.norm(temp_mesh_vectors_1)
+            dot_prod_1 = mesh_vec_1.dot(temp_mesh_vectors_1) / norm_func(mesh_vec_1) / norm_func(temp_mesh_vectors_1)
             
             if dot_prod_1 > 1.:
                 theta_1 = 0. # to prevent nan in case value for arccos is greater than 1 due to machine precision
@@ -717,7 +727,7 @@ def gen_crm_mesh(num_x, num_y, span, chord, span_cos_spacing=0., chord_cos_spaci
     # If we need to add chordwise panels, do so
     if num_x > 2:
         mesh = add_chordwise_panels(mesh, num_x, chord_cos_spacing)
-
+    mesh = np.array(mesh, dtype='complex128')
     return mesh, eta, twist
 
 

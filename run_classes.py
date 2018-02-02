@@ -492,8 +492,8 @@ class OASProblem(object):
             if self.prob_dict['optimizer'] == 'SNOPT':
                 print("POS SNOPT")
                 self.prob.driver.options['optimizer'] = "SNOPT"
-                self.prob.driver.opt_settings = {'Major optimality tolerance': 1e-6,
-                                                 'Major feasibility tolerance': 1e-6,
+                self.prob.driver.opt_settings = {'Major optimality tolerance': 1e-8,
+                                                 'Major feasibility tolerance': 1e-8,
                                                  'Major iterations limit':50,
                                                  'Minor iterations limit':2000,
                                                  'Iterations limit':1000
