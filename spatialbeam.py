@@ -269,6 +269,8 @@ class AssembleK(Component):
 
         self.surface = surface
 
+        self.surface = surface
+
     def solve_nonlinear(self, params, unknowns, resids):
 
         # Find constrained nodes based on closeness to specified cg point
