@@ -22,8 +22,8 @@ def wingbox_props(chord, sparthickness, skinthickness, data_x_upper, data_x_lowe
         A_enc += (data_x_upper[i+1] - data_x_upper[i]) * (data_y_upper[i+1] + data_y_upper[i] - thickness_skin ) / 2 # area above 0 line
         A_enc += (data_x_lower[i+1] - data_x_lower[i]) * (-data_y_lower[i+1] - data_y_lower[i] - thickness_skin ) / 2 # area below 0 line
 
-    A_enc += (data_y_upper[0] - data_y_lower[0]) * thickness_spar / 2 # area of spars
-    A_enc += (data_y_upper[-1] - data_y_lower[-1]) * thickness_spar / 2 # area of spars
+    A_enc -= (data_y_upper[0] - data_y_lower[0]) * thickness_spar / 2 # area of spars
+    A_enc -= (data_y_upper[-1] - data_y_lower[-1]) * thickness_spar / 2 # area of spars
 
     # Compute perimeter to thickness ratio for torsion constant
     # This currently does not change with twist
@@ -32,8 +32,8 @@ def wingbox_props(chord, sparthickness, skinthickness, data_x_upper, data_x_lowe
         p_by_t += ((data_x_upper[i+1] - data_x_upper[i])**2 + (data_y_upper[i+1] - data_y_upper[i])**2)**0.5 / thickness_skin # length / thickness of caps
         p_by_t += ((data_x_lower[i+1] - data_x_lower[i])**2 + (data_y_lower[i+1] - data_y_lower[i])**2)**0.5 / thickness_skin # length / thickness of caps
         
-    p_by_t += (data_y_upper[0] - data_y_lower[0]) / thickness_spar # length / thickness of spars
-    p_by_t += (data_y_upper[-1] - data_y_lower[-1]) / thickness_spar # length / thickness of spars
+    p_by_t += (data_y_upper[0] - data_y_lower[0] - thickness_skin) / thickness_spar # length / thickness of spars
+    p_by_t += (data_y_upper[-1] - data_y_lower[-1] - thickness_skin) / thickness_spar # length / thickness of spars
 
     # Torsion constant
     J = 4 * A_enc**2 / p_by_t
@@ -104,25 +104,30 @@ def wingbox_props(chord, sparthickness, skinthickness, data_x_upper, data_x_lowe
 
     # Compute area moment of inertia for backward bending
     I_vert = 0
-    first_moment_area_left = (data_y_upper[0] - data_y_lower[0]) * thickness_spar * (data_x_upper[0] - thickness_spar / 2)
-    first_moment_area_right = (data_y_upper[-1] - data_y_lower[-1]) * thickness_spar * (data_x_upper[-1] + thickness_spar / 2)
+    first_moment_area_left = (data_y_upper[0] - data_y_lower[0]) * thickness_spar * (data_x_upper[0] + thickness_spar / 2)
+    first_moment_area_right = (data_y_upper[-1] - data_y_lower[-1]) * thickness_spar * (data_x_upper[-1] - thickness_spar / 2)
     centroid_Ivert = (first_moment_area_left + first_moment_area_right) / \
                     ( ((data_y_upper[0] - data_y_lower[0]) + (data_y_upper[-1] - data_y_lower[-1])) * thickness_spar)
 
-    I_vert += 1./12. * (data_y_upper[0] - data_y_lower[0]) * thickness_spar**3 + (data_y_upper[0] - data_y_lower[0]) * thickness_spar * (centroid_Ivert - (data_x_upper[0] - thickness_spar/2))**2
-    I_vert += 1./12. * (data_y_upper[-1] - data_y_lower[-1]) * thickness_spar**3 + (data_y_upper[-1] - data_y_lower[-1]) * thickness_spar * (data_x_upper[-1] + thickness_spar/2 - centroid_Ivert)**2
+    I_vert += 1./12. * (data_y_upper[0] - data_y_lower[0]) * thickness_spar**3 + (data_y_upper[0] - data_y_lower[0]) * thickness_spar * (centroid_Ivert - (data_x_upper[0] + thickness_spar/2))**2
+    I_vert += 1./12. * (data_y_upper[-1] - data_y_lower[-1]) * thickness_spar**3 + (data_y_upper[-1] - data_y_lower[-1]) * thickness_spar * (data_x_upper[-1] - thickness_spar/2 - centroid_Ivert)**2
+    
+    # Add contribution of skins
+    I_vert += 2 * ( 1./12. * thickness_skin * (data_x_upper[-1] - data_x_upper[0] - 2 * thickness_spar)**3 + thickness_skin * (data_x_upper[-1] - data_x_upper[0] - 2 * thickness_spar) * (centroid_Ivert - (data_x_upper[-1] + data_x_upper[0]) / 2)**2 )
 
-    area_spar = ((data_y_upper[0] - data_y_lower[0]) + (data_y_upper[-1] - data_y_lower[-1])) * thickness_spar 
+    area_spar = ((data_y_upper[0] - data_y_lower[0] - 2 * thickness_skin) + (data_y_upper[-1] - data_y_lower[-1] - 2 * thickness_skin)) * thickness_spar 
     area += area_spar
     
-    # Distances for calculating max bending stresses
-    htop = max(data_y_upper) - centroid
-    # htop = data_y_upper[-1] - centroid
-    hbottom = centroid - min(data_y_lower)
-    # hbottom = centroid - data_y_lower[0]
+    # Distances for calculating max bending stresses (KS function used)
+    ks_rho = 500. # Hard coded, see Martins and Poon 2005 for more
+    fmax_upper = np.max(data_y_upper)
+    htop = fmax_upper + 1 / ks_rho * np.log(np.sum(np.exp(ks_rho * (data_y_upper - fmax_upper)))) - centroid
     
-    hleft =  centroid_Ivert - data_x_upper[0] + thickness_spar
-    hright = data_x_upper[-1] - centroid_Ivert + thickness_spar
+    fmax_lower = np.max(-data_y_lower)
+    hbottom = fmax_lower + 1 / ks_rho * np.log(np.sum(np.exp(ks_rho * (-data_y_lower - fmax_lower)))) + centroid
+    
+    hleft =  centroid_Ivert - data_x_upper[0]
+    hright = data_x_upper[-1] - centroid_Ivert
     
     return I_horiz, I_vert, J, area, A_enc, htop, hbottom, hleft, hright, area_spar
 
