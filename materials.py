@@ -11,29 +11,26 @@ def wingbox_props(chord, sparthickness, skinthickness, data_x_upper, data_x_lowe
     data_x_lower = chord * data_x_lower
     data_y_lower = chord * data_y_lower
     
-    thickness_skin = skinthickness
-    thickness_spar = sparthickness
-    
     # Compute enclosed area for torsion constant
     # This currently does not change with twist
     A_enc = 0
     for i in range(data_x_upper.size-1):
         
-        A_enc += (data_x_upper[i+1] - data_x_upper[i]) * (data_y_upper[i+1] + data_y_upper[i] - thickness_skin ) / 2 # area above 0 line
-        A_enc += (data_x_lower[i+1] - data_x_lower[i]) * (-data_y_lower[i+1] - data_y_lower[i] - thickness_skin ) / 2 # area below 0 line
+        A_enc += (data_x_upper[i+1] - data_x_upper[i]) * (data_y_upper[i+1] + data_y_upper[i] - skinthickness ) / 2 # area above 0 line
+        A_enc += (data_x_lower[i+1] - data_x_lower[i]) * (-data_y_lower[i+1] - data_y_lower[i] - skinthickness ) / 2 # area below 0 line
 
-    A_enc -= (data_y_upper[0] - data_y_lower[0]) * thickness_spar / 2 # area of spars
-    A_enc -= (data_y_upper[-1] - data_y_lower[-1]) * thickness_spar / 2 # area of spars
+    A_enc -= (data_y_upper[0] - data_y_lower[0]) * sparthickness / 2 # area of spars
+    A_enc -= (data_y_upper[-1] - data_y_lower[-1]) * sparthickness / 2 # area of spars
 
     # Compute perimeter to thickness ratio for torsion constant
     # This currently does not change with twist
     p_by_t = 0
     for i in range(data_x_upper.size-1):
-        p_by_t += ((data_x_upper[i+1] - data_x_upper[i])**2 + (data_y_upper[i+1] - data_y_upper[i])**2)**0.5 / thickness_skin # length / thickness of caps
-        p_by_t += ((data_x_lower[i+1] - data_x_lower[i])**2 + (data_y_lower[i+1] - data_y_lower[i])**2)**0.5 / thickness_skin # length / thickness of caps
+        p_by_t += ((data_x_upper[i+1] - data_x_upper[i])**2 + (data_y_upper[i+1] - data_y_upper[i])**2)**0.5 / skinthickness # length / thickness of caps
+        p_by_t += ((data_x_lower[i+1] - data_x_lower[i])**2 + (data_y_lower[i+1] - data_y_lower[i])**2)**0.5 / skinthickness # length / thickness of caps
         
-    p_by_t += (data_y_upper[0] - data_y_lower[0] - thickness_skin) / thickness_spar # length / thickness of spars
-    p_by_t += (data_y_upper[-1] - data_y_lower[-1] - thickness_skin) / thickness_spar # length / thickness of spars
+    p_by_t += (data_y_upper[0] - data_y_lower[0] - skinthickness) / sparthickness # length / thickness of spars
+    p_by_t += (data_y_upper[-1] - data_y_lower[-1] - skinthickness) / sparthickness # length / thickness of spars
 
     # Torsion constant
     J = 4 * A_enc**2 / p_by_t
@@ -69,11 +66,11 @@ def wingbox_props(chord, sparthickness, skinthickness, data_x_upper, data_x_lowe
     first_moment_area_lower = 0
     lower_area = 0
     for i in range(data_x_upper.size-1):
-        first_moment_area_upper += ((data_y_upper[i+1] + data_y_upper[i]) / 2 - (thickness_skin/2) ) * thickness_skin * (data_x_upper[i+1] - data_x_upper[i])
-        upper_area += thickness_skin * (data_x_upper[i+1] - data_x_upper[i])
+        first_moment_area_upper += ((data_y_upper[i+1] + data_y_upper[i]) / 2 - (skinthickness/2) ) * skinthickness * (data_x_upper[i+1] - data_x_upper[i])
+        upper_area += skinthickness * (data_x_upper[i+1] - data_x_upper[i])
         
-        first_moment_area_lower += ((data_y_lower[i+1] + data_y_lower[i]) / 2 + (thickness_skin/2) ) * thickness_skin * (data_x_lower[i+1] - data_x_lower[i])
-        lower_area += thickness_skin * (data_x_lower[i+1] - data_x_lower[i])
+        first_moment_area_lower += ((data_y_lower[i+1] + data_y_lower[i]) / 2 + (skinthickness/2) ) * skinthickness * (data_x_lower[i+1] - data_x_lower[i])
+        lower_area += skinthickness * (data_x_lower[i+1] - data_x_lower[i])
 
     area = upper_area + lower_area
     centroid = (first_moment_area_upper + first_moment_area_lower) / area
@@ -83,39 +80,44 @@ def wingbox_props(chord, sparthickness, skinthickness, data_x_upper, data_x_lowe
     I_horiz = 0
     for i in range(data_x_upper.size-1): # upper surface
         a = (data_y_upper[i] - data_y_upper[i+1]) / (data_x_upper[i] - data_x_upper[i+1])
-        b = (data_y_upper[i+1] - data_y_upper[i] + thickness_skin) / 2
+        b = (data_y_upper[i+1] - data_y_upper[i] + skinthickness) / 2
         x2 = data_x_upper[i+1] - data_x_upper[i]
         
         I_horiz += 2 * ((1./12. * a**3 * x2**4 + 1./3. * a**2 * x2**3 * b + 1./2. * a * x2**2 * b**2 + 1./3. * b**3 * x2))
         
-        I_horiz += x2  * thickness_skin * ((data_y_upper[i] + data_y_upper[i+1])/2 - thickness_skin/2 - centroid)**2
+        I_horiz += x2  * skinthickness * ((data_y_upper[i] + data_y_upper[i+1])/2 - skinthickness/2 - centroid)**2
 
     
     # Compute area moment of inertia about y axis
     for i in range(data_x_lower.size-1): # lower surface
         a = -(data_y_lower[i] - data_y_lower[i+1]) / (data_x_lower[i] - data_x_lower[i+1])
-        b = (-data_y_lower[i+1] + data_y_lower[i] + thickness_skin) / 2
+        b = (-data_y_lower[i+1] + data_y_lower[i] + skinthickness) / 2
         x2 = data_x_lower[i+1] - data_x_lower[i]
         
         I_horiz += 2 * ((1./12. * a**3 * x2**4 + 1./3. * a**2 * x2**3 * b + 1./2. * a * x2**2 * b**2 + 1./3. * b**3 * x2))
         
-        I_horiz += x2 * thickness_skin * ((-data_y_lower[i] - data_y_lower[i+1])/2 - thickness_skin/2 + centroid)**2
-        
+        I_horiz += x2 * skinthickness * ((-data_y_lower[i] - data_y_lower[i+1])/2 - skinthickness/2 + centroid)**2
+    
+    # Contribution from the forward spar
+    I_horiz += 1./12. * sparthickness * (data_y_upper[0] - data_y_lower[0] - 2 * skinthickness)**3 + sparthickness * (data_y_upper[0] - data_y_lower[0] - 2 * skinthickness) * ((data_y_upper[0] + data_y_lower[0]) / 2 - centroid)**2
+    # Contribution from the rear spar
+    I_horiz += 1./12. * sparthickness * (data_y_upper[-1] - data_y_lower[-1] - 2 * skinthickness)**3 + sparthickness * (data_y_upper[-1] - data_y_lower[-1] - 2 * skinthickness) * ((data_y_upper[-1] + data_y_lower[-1]) / 2 - centroid)**2
+    
 
     # Compute area moment of inertia for backward bending
     I_vert = 0
-    first_moment_area_left = (data_y_upper[0] - data_y_lower[0]) * thickness_spar * (data_x_upper[0] + thickness_spar / 2)
-    first_moment_area_right = (data_y_upper[-1] - data_y_lower[-1]) * thickness_spar * (data_x_upper[-1] - thickness_spar / 2)
+    first_moment_area_left = (data_y_upper[0] - data_y_lower[0]) * sparthickness * (data_x_upper[0] + sparthickness / 2)
+    first_moment_area_right = (data_y_upper[-1] - data_y_lower[-1]) * sparthickness * (data_x_upper[-1] - sparthickness / 2)
     centroid_Ivert = (first_moment_area_left + first_moment_area_right) / \
-                    ( ((data_y_upper[0] - data_y_lower[0]) + (data_y_upper[-1] - data_y_lower[-1])) * thickness_spar)
+                    ( ((data_y_upper[0] - data_y_lower[0]) + (data_y_upper[-1] - data_y_lower[-1])) * sparthickness)
 
-    I_vert += 1./12. * (data_y_upper[0] - data_y_lower[0]) * thickness_spar**3 + (data_y_upper[0] - data_y_lower[0]) * thickness_spar * (centroid_Ivert - (data_x_upper[0] + thickness_spar/2))**2
-    I_vert += 1./12. * (data_y_upper[-1] - data_y_lower[-1]) * thickness_spar**3 + (data_y_upper[-1] - data_y_lower[-1]) * thickness_spar * (data_x_upper[-1] - thickness_spar/2 - centroid_Ivert)**2
+    I_vert += 1./12. * (data_y_upper[0] - data_y_lower[0]) * sparthickness**3 + (data_y_upper[0] - data_y_lower[0]) * sparthickness * (centroid_Ivert - (data_x_upper[0] + sparthickness/2))**2
+    I_vert += 1./12. * (data_y_upper[-1] - data_y_lower[-1]) * sparthickness**3 + (data_y_upper[-1] - data_y_lower[-1]) * sparthickness * (data_x_upper[-1] - sparthickness/2 - centroid_Ivert)**2
     
     # Add contribution of skins
-    I_vert += 2 * ( 1./12. * thickness_skin * (data_x_upper[-1] - data_x_upper[0] - 2 * thickness_spar)**3 + thickness_skin * (data_x_upper[-1] - data_x_upper[0] - 2 * thickness_spar) * (centroid_Ivert - (data_x_upper[-1] + data_x_upper[0]) / 2)**2 )
+    I_vert += 2 * ( 1./12. * skinthickness * (data_x_upper[-1] - data_x_upper[0] - 2 * sparthickness)**3 + skinthickness * (data_x_upper[-1] - data_x_upper[0] - 2 * sparthickness) * (centroid_Ivert - (data_x_upper[-1] + data_x_upper[0]) / 2)**2 )
 
-    area_spar = ((data_y_upper[0] - data_y_lower[0] - 2 * thickness_skin) + (data_y_upper[-1] - data_y_lower[-1] - 2 * thickness_skin)) * thickness_spar 
+    area_spar = ((data_y_upper[0] - data_y_lower[0] - 2 * skinthickness) + (data_y_upper[-1] - data_y_lower[-1] - 2 * skinthickness)) * sparthickness 
     area += area_spar
     
     # Distances for calculating max bending stresses (KS function used)
