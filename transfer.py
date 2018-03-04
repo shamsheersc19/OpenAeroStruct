@@ -173,6 +173,8 @@ class TransferLoads(Component):
                         dtype=complex))
 
         self.deriv_options['type'] = 'cs'
+        self.deriv_options['check_type'] = 'fd'
+        self.deriv_options['check_form'] = 'central'
 
     def solve_nonlinear(self, params, unknowns, resids):
         mesh = params['def_mesh']

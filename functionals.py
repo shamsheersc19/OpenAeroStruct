@@ -52,7 +52,8 @@ class FunctionalBreguetRange(Component):
         self.add_output('weighted_obj', val=0.)
 
         self.deriv_options['type'] = 'cs'
-        self.deriv_options['form'] = 'central'
+        self.deriv_options['check_type'] = 'fd'
+        self.deriv_options['check_form'] = 'central'
 
     def solve_nonlinear(self, params, unknowns, resids):
         CT = self.prob_dict['CT']
@@ -126,7 +127,8 @@ class FunctionalEquilibrium(Component):
         self.add_output('total_weight', val=0.)
 
         self.deriv_options['type'] = 'cs'
-        self.deriv_options['form'] = 'central'
+        self.deriv_options['check_type'] = 'fd'
+        self.deriv_options['check_form'] = 'central'
 
     def solve_nonlinear(self, params, unknowns, resids):
         structural_weight = 0.
@@ -190,7 +192,8 @@ class ComputeCG(Component):
         self.add_output('cg', val=np.zeros((3), dtype=complex))
 
         self.deriv_options['type'] = 'cs'
-        self.deriv_options['form'] = 'central'
+        self.deriv_options['check_type'] = 'fd'
+        self.deriv_options['check_form'] = 'central'
 
     def solve_nonlinear(self, params, unknowns, resids):
         g = self.prob_dict['g']

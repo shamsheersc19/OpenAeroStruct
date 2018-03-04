@@ -1527,6 +1527,8 @@ class ViscousDrag(Component):
         self.with_viscous = with_viscous
         
         self.deriv_options['type'] = 'cs'
+        self.deriv_options['check_type'] = 'fd'
+        self.deriv_options['check_form'] = 'central'
 
     def solve_nonlinear(self, params, unknowns, resids):
         if self.with_viscous:

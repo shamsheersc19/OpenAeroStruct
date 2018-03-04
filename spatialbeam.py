@@ -698,9 +698,9 @@ class SpatialBeamVonMisesTube(Component):
         self.add_param('hleft', val=np.zeros((self.ny - 1), dtype=complex))
         self.add_param('hright', val=np.zeros((self.ny - 1)), dtype=complex)
         
-        # if not fortran_flag:
         self.deriv_options['type'] = 'cs'
-        # self.deriv_options['form'] = 'central'
+        self.deriv_options['check_type'] = 'fd'
+        self.deriv_options['check_form'] = 'central'
 
         self.E = surface['E']
         self.G = surface['G']

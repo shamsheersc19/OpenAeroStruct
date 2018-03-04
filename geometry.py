@@ -434,7 +434,8 @@ class GeometryMesh(Component):
 
         # if not fortran_flag:
         self.deriv_options['type'] = 'cs'
-        # self.deriv_options['form'] = 'central'
+        self.deriv_options['check_type'] = 'fd'
+        self.deriv_options['check_form'] = 'central'
 
     def solve_nonlinear(self, params, unknowns, resids):
         mesh = self.mesh.copy()
