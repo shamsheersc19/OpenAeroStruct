@@ -103,7 +103,8 @@ if __name__ == "__main__":
                  'num_twist_cp' : 5,
                  'num_thickness_cp' : 5,
                  'twist_cp' : np.array([0., 0., 0., 0., 0.]),
-                 'thickness_cp' : np.array([0.01, 0.02, 0.03, 0.03, 0.03]),
+                 'thickness_cp' : np.array([0.01, 0.02, 0.03, 0.03, 0.03]), # this thickness variable does not do anything, but keep it for now because run_classes expects it. This will be fixed later.
+                 # The following two are thickness variables that differ from the thickness variable in the standard OAS.
                  'skinthickness_cp' : np.array([0.01, 0.02, 0.03, 0.03, 0.03]),
                  'sparthickness_cp' : np.array([0.01, 0.02, 0.03, 0.03, 0.03]),
                  'E' : 70.e9,            # [Pa] Young's modulus of the spar
@@ -114,6 +115,20 @@ if __name__ == "__main__":
                  'fem_origin' : 0.4,
                  'exact_failure_constraint' : False, # if false, use KS function
                  'monotonic_con' : None,
+                 # The following are the airfoil coordinates for the wingbox section (e.g., from 15% to 65%)
+                 # The chord for the corresponding airfoil should be 1
+                 # The first and last x-coordinates of the upper and lower skins must be the same
+                 # The datatype should be complex to work with the complex-step approximation for derivatives
+                 'data_x_upper' : np.array([0.15,   0.17,   0.2,    0.22,   0.25,   0.27,   0.3,    0.33,   0.35,   0.38,   0.4,
+                                             0.43,   0.45,   0.48,   0.5,    0.53,   0.55,   0.57,   0.6,    0.62,   0.65,], dtype = 'complex128'),
+                 'data_x_lower' : np.array([ 0.15,   0.17,   0.2,    0.22,   0.25,   0.28,   0.3,    0.32,   0.35,   0.37,   0.4,
+                                             0.42,   0.45,   0.48,   0.5,    0.53,   0.55,   0.58,   0.6,    0.63,   0.65,], dtype = 'complex128'),
+                 'data_y_upper' : np.array([  0.0585,  0.0606,  0.0632,  0.0646,  0.0664,  0.0673,  0.0685,
+                                             0.0692,  0.0696,  0.0698,  0.0697,  0.0695,  0.0692,  0.0684,  0.0678,  0.0666,
+                                             0.0656,  0.0645,  0.0625,  0.061,   0.0585], dtype = 'complex128'),
+                 'data_y_lower' : np.array([-0.0585, -0.0606, -0.0633, -0.0647, -0.0666, -0.068,  -0.0687, 
+                                             -0.0692, -0.0696, -0.0696, -0.0692, -0.0688, -0.0676, -0.0657, -0.0644, -0.0614, 
+                                             -0.0588, -0.0543, -0.0509, -0.0451, -0.041], dtype = 'complex128'),
                 }
 
     # Add the specified wing surface to the problem
