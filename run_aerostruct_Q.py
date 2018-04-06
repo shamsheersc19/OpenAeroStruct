@@ -53,7 +53,7 @@ if __name__ == "__main__":
     
     # MDA approach options
     
-    solver_options = ['gs_wo_aitken', 'gs_w_aitken', 'hybrid_GSN', 'newton_gmres', 'newton_direct', 'GS_then_Newton']
+    solver_options = ['gs_wo_aitken', 'gs_w_aitken', 'AS', 'newton_gmres', 'newton_direct', 'GS_then_Newton']
     solver_combo = solver_options[solver_option_index] 
     solver_atol = 1e-6
 

@@ -35,8 +35,7 @@ from .vlm import VLMStates, VLMFunctionals, VLMGeometry
 from .spatialbeam import SpatialBeamStates, SpatialBeamFunctionals, SpatialBeamSetup, radii
 from .materials import MaterialsTube
 from .functionals import TotalPerformance, TotalAeroPerformance, FunctionalBreguetRange, FunctionalEquilibrium
-# from .gs_newton import HybridGSNewton
-from openmdao.solvers.gs_newton import HybridGSNewton
+from openmdao.solvers.automated_selection import AutomatedSelection
 
 try:
     from openmdao.solvers.gs_then_newton import GSthenNewton
@@ -1140,7 +1139,7 @@ class OASProblem(object):
             coupled.nl_solver.options['maxiter'] = 10
             coupled.nl_solver.options['solve_subsystems'] = True
             
-        if solver_combo == 'hybrid_GSN':
+        if solver_combo == 'AS':
             
             print("CONFIRM HYBRID")
             
@@ -1150,7 +1149,7 @@ class OASProblem(object):
             coupled.ln_solver.preconditioner = LinearGaussSeidel()
             coupled.ln_solver.preconditioner.options['maxiter'] = 1
             
-            coupled.nl_solver = HybridGSNewton()
+            coupled.nl_solver = AutomatedSelection()
             coupled.nl_solver.options['maxiter_nlgs'] = 1000
             coupled.nl_solver.options['maxiter_newton'] = 15
             
