@@ -103,6 +103,13 @@ def wingbox_props(chord, sparthickness, skinthickness, data_x_upper, data_x_lowe
     # Contribution from the rear spar
     I_horiz += 1./12. * sparthickness * (data_y_upper[-1] - data_y_lower[-1] - 2 * skinthickness)**3 + sparthickness * (data_y_upper[-1] - data_y_lower[-1] - 2 * skinthickness) * ((data_y_upper[-1] + data_y_lower[-1]) / 2 - centroid)**2
     
+    # Compute the Q required for transverse shear stress due to upward bending
+    Q_upper = 0
+    for i in range(data_x_upper.size-1):
+        Q_upper += (((data_y_upper[i+1] + data_y_upper[i]) / 2 - (skinthickness/2) ) - centroid) * skinthickness * (data_x_upper[i+1] - data_x_upper[i])
+    
+    Q_upper += (data_y_upper[0] - skinthickness - centroid)**2 / 2 * (sparthickness)
+    Q_upper += (data_y_upper[-1] - skinthickness - centroid)**2 / 2 * (sparthickness)
 
     # Compute area moment of inertia for backward bending
     I_vert = 0
@@ -131,7 +138,7 @@ def wingbox_props(chord, sparthickness, skinthickness, data_x_upper, data_x_lowe
     hleft =  centroid_Ivert - data_x_upper[0]
     hright = data_x_upper[-1] - centroid_Ivert
     
-    return I_horiz, I_vert, J, area, A_enc, htop, hbottom, hleft, hright, area_spar
+    return I_horiz, I_vert, Q_upper, J, area, A_enc, htop, hbottom, hleft, hright
 
 class MaterialsTube(Component):
     """
@@ -182,8 +189,8 @@ class MaterialsTube(Component):
         
         self.add_output('A', val=np.ones((self.ny - 1),  dtype = complex))
         self.add_output('A_enc', val=np.ones((self.ny - 1),  dtype = complex))
-        self.add_output('A_spar', val=np.ones((self.ny - 1),  dtype = complex))
         self.add_output('Iy', val=np.ones((self.ny - 1),  dtype = complex))
+        self.add_output('Qz', val=np.ones((self.ny - 1),  dtype = complex))
         self.add_output('Iz', val=np.ones((self.ny - 1),  dtype = complex))
         self.add_output('J', val=np.ones((self.ny - 1),  dtype = complex))
         self.add_output('htop', val=np.ones((self.ny - 1),  dtype = complex))
@@ -201,7 +208,7 @@ class MaterialsTube(Component):
         
         for i in range(self.ny - 1):
             
-            unknowns['Iz'][i], unknowns['Iy'][i], unknowns['J'][i], unknowns['A'][i], unknowns['A_enc'][i],\
-            unknowns['htop'][i], unknowns['hbottom'][i], unknowns['hleft'][i], unknowns['hright'][i], unknowns['A_spar'][i]  = \
+            unknowns['Iz'][i], unknowns['Iy'][i], unknowns['Qz'][i], unknowns['J'][i], unknowns['A'][i], unknowns['A_enc'][i],\
+            unknowns['htop'][i], unknowns['hbottom'][i], unknowns['hleft'][i], unknowns['hright'][i]  = \
             wingbox_props(params['chords_fem'][i], params['sparthickness'][i], params['skinthickness'][i], self.data_x_upper, \
             self.data_x_lower, self.data_y_upper, self.data_y_lower, -params['twist_fem'][i])

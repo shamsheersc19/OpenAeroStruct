@@ -682,13 +682,12 @@ class SpatialBeamVonMisesTube(Component):
         self.add_output('vonmises', val=np.zeros((self.ny-1, 4),
                         dtype=complex))
                         
-        self.add_param('A', val=np.zeros((self.ny - 1), dtype=complex))
-        self.add_param('Iy', val=np.zeros((self.ny - 1), dtype=complex))
+        # self.add_param('A', val=np.zeros((self.ny - 1), dtype=complex))
+        # self.add_param('Iy', val=np.zeros((self.ny - 1), dtype=complex))
+        self.add_param('Qz', val=np.zeros((self.ny - 1), dtype=complex))
         self.add_param('Iz', val=np.zeros((self.ny - 1), dtype=complex))
         self.add_param('J', val=np.zeros((self.ny - 1), dtype=complex))
         self.add_param('A_enc', val=np.zeros((self.ny - 1), dtype=complex))
-        self.add_param('thickness', val=np.zeros((self.ny - 1)), dtype=complex)
-        self.add_param('A_spar', val=np.ones((self.ny - 1),  dtype = complex))
         
         self.add_param('sparthickness', val=np.zeros((self.ny - 1)), dtype=complex)
         self.add_param('skinthickness', val=np.zeros((self.ny - 1)), dtype=complex)
@@ -716,10 +715,10 @@ class SpatialBeamVonMisesTube(Component):
         disp = params['disp']
         nodes = params['nodes']
         vonmises = unknowns['vonmises']
-        A = params['A']
+        # A = params['A']
         A_enc = params['A_enc']
-        A_spar = params['A_spar']
-        Iy = params['Iy']
+        # Iy = params['Iy']
+        Qy = params['Qz']
         Iz = params['Iz']
         J = params['J']
         # print("A is", A, "A_enc is",A_enc,"Iy",Iy,"Iz",Iz, "J", J)
@@ -727,7 +726,6 @@ class SpatialBeamVonMisesTube(Component):
         hbottom = params['hbottom']
         hleft = params['hleft']
         hright = params['hright']
-        thickness = params['thickness']
         sparthickness = params['sparthickness']
         skinthickness = params['skinthickness']
         
@@ -767,7 +765,7 @@ class SpatialBeamVonMisesTube(Component):
             left_bending_stress = - E / (L**2) * (-6 * u0z + 2 * r0y * L + 6 * u1z + 4 * r1y * L ) * hleft[ielem] # this is moment * htop / I  
             right_bending_stress = E / (L**2) * (-6 * u0z + 2 * r0y * L + 6 * u1z + 4 * r1y * L ) * hright[ielem] # this is moment * htop / I  
             
-            vertical_shear = 1.5 / A_spar[ielem] * E * Iz[ielem] / (L**3) *(-12 * u0y - 6 * r0z * L + 12 * u1y - 6 * r1z * L ) # conservative estimate for shear due to bending
+            vertical_shear =  E / (L**3) *(-12 * u0y - 6 * r0z * L + 12 * u1y - 6 * r1z * L ) * Qy[ielem] / sparthickness[ielem] # shear due to bending (VQ/It) note: the I used to get V cancels the other I
             
             # print("==========",ielem,"================")
             # print("vertical_shear", vertical_shear)
