@@ -1061,8 +1061,8 @@ class OASProblem(object):
             root.connect(name[:-1] + '.htop', name + 'perf.htop')
             root.connect(name[:-1] + '.hbottom', name + 'perf.hbottom')
             root.connect(name[:-1] + '.Qz', name + 'perf.Qz')
-            root.connect(name[:-1] + '.hleft', name + 'perf.hleft')
-            root.connect(name[:-1] + '.hright', name + 'perf.hright')
+            root.connect(name[:-1] + '.hfront', name + 'perf.hfront')
+            root.connect(name[:-1] + '.hrear', name + 'perf.hrear')
             root.connect(name[:-1] + '.sparthickness', name + 'perf.sparthickness')
             root.connect(name[:-1] + '.skinthickness', name + 'perf.skinthickness')
 

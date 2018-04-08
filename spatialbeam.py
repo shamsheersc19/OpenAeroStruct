@@ -694,8 +694,8 @@ class SpatialBeamVonMisesTube(Component):
         
         self.add_param('htop', val=np.zeros((self.ny - 1), dtype=complex))
         self.add_param('hbottom', val=np.zeros((self.ny - 1), dtype=complex))
-        self.add_param('hleft', val=np.zeros((self.ny - 1), dtype=complex))
-        self.add_param('hright', val=np.zeros((self.ny - 1)), dtype=complex)
+        self.add_param('hfront', val=np.zeros((self.ny - 1), dtype=complex))
+        self.add_param('hrear', val=np.zeros((self.ny - 1)), dtype=complex)
         
         self.deriv_options['type'] = 'cs'
         self.deriv_options['check_type'] = 'fd'
@@ -724,8 +724,8 @@ class SpatialBeamVonMisesTube(Component):
         # print("A is", A, "A_enc is",A_enc,"Iy",Iy,"Iz",Iz, "J", J)
         htop = params['htop']
         hbottom = params['hbottom']
-        hleft = params['hleft']
-        hright = params['hright']
+        hfront = params['hfront']
+        hrear = params['hrear']
         sparthickness = params['sparthickness']
         skinthickness = params['skinthickness']
         
@@ -762,8 +762,8 @@ class SpatialBeamVonMisesTube(Component):
             torsion_stress = G * J[ielem] / L * (r1x - r0x) / 2 / sparthickness[ielem] / A_enc[ielem]   # this is Torque / (2 * thickness_min * Area_enclosed)
             top_bending_stress = E / (L**2) * (6 * u0y + 2 * r0z * L - 6 * u1y + 4 * r1z * L ) * htop[ielem] # this is moment * htop / I  
             bottom_bending_stress = - E / (L**2) * (6 * u0y + 2 * r0z * L - 6 * u1y + 4 * r1z * L ) * hbottom[ielem] # this is moment * htop / I  
-            left_bending_stress = - E / (L**2) * (-6 * u0z + 2 * r0y * L + 6 * u1z + 4 * r1y * L ) * hleft[ielem] # this is moment * htop / I  
-            right_bending_stress = E / (L**2) * (-6 * u0z + 2 * r0y * L + 6 * u1z + 4 * r1y * L ) * hright[ielem] # this is moment * htop / I  
+            front_bending_stress = - E / (L**2) * (-6 * u0z + 2 * r0y * L + 6 * u1z + 4 * r1y * L ) * hfront[ielem] # this is moment * htop / I  
+            rear_bending_stress = E / (L**2) * (-6 * u0z + 2 * r0y * L + 6 * u1z + 4 * r1y * L ) * hrear[ielem] # this is moment * htop / I  
             
             vertical_shear =  E / (L**3) *(-12 * u0y - 6 * r0z * L + 12 * u1y - 6 * r1z * L ) * Qy[ielem] / sparthickness[ielem] # shear due to bending (VQ/It) note: the I used to get V cancels the other I
             
@@ -771,15 +771,15 @@ class SpatialBeamVonMisesTube(Component):
             # print("vertical_shear", vertical_shear)
             # print("top",top_bending_stress)
             # print("bottom",bottom_bending_stress)
-            # print("left",left_bending_stress)
-            # print("right",right_bending_stress)
+            # print("front",front_bending_stress)
+            # print("rear",rear_bending_stress)
             # print("axial", axial_stress)
             # print("torsion", torsion_stress)
         
-            vonmises[ielem, 0] = np.sqrt((top_bending_stress + right_bending_stress + axial_stress)**2 + 3*torsion_stress**2) / self.tssf
-            vonmises[ielem, 1] = np.sqrt((bottom_bending_stress + left_bending_stress + axial_stress)**2 + 3*torsion_stress**2)
-            vonmises[ielem, 2] = np.sqrt((left_bending_stress + axial_stress)**2 + 3*(torsion_stress-vertical_shear)**2) 
-            vonmises[ielem, 3] = np.sqrt((right_bending_stress + axial_stress)**2 + 3*(torsion_stress+vertical_shear)**2) / self.tssf
+            vonmises[ielem, 0] = np.sqrt((top_bending_stress + rear_bending_stress + axial_stress)**2 + 3*torsion_stress**2) / self.tssf
+            vonmises[ielem, 1] = np.sqrt((bottom_bending_stress + front_bending_stress + axial_stress)**2 + 3*torsion_stress**2)
+            vonmises[ielem, 2] = np.sqrt((front_bending_stress + axial_stress)**2 + 3*(torsion_stress-vertical_shear)**2) 
+            vonmises[ielem, 3] = np.sqrt((rear_bending_stress + axial_stress)**2 + 3*(torsion_stress+vertical_shear)**2) / self.tssf
 
 
 class SpatialBeamFailureKS(Component):

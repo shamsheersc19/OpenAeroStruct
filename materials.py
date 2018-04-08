@@ -71,9 +71,13 @@ def wingbox_props(chord, sparthickness, skinthickness, data_x_upper, data_x_lowe
         
         first_moment_area_lower += ((data_y_lower[i+1] + data_y_lower[i]) / 2 + (skinthickness/2) ) * skinthickness * (data_x_lower[i+1] - data_x_lower[i])
         lower_area += skinthickness * (data_x_lower[i+1] - data_x_lower[i])
-
-    area = upper_area + lower_area
-    centroid = (first_moment_area_upper + first_moment_area_lower) / area
+    
+    first_moment_area_front_spar = (data_y_upper[0] - data_y_lower[0] - 2 * skinthickness) * sparthickness * (data_y_upper[0] + data_y_lower[0]) / 2
+    first_moment_area_rear_spar = (data_y_upper[-1] - data_y_lower[-1] - 2 * skinthickness) * sparthickness * (data_y_upper[-1] + data_y_lower[-1]) / 2
+    area_spars = ((data_y_upper[0] - data_y_lower[0] - 2 * skinthickness) + (data_y_upper[-1] - data_y_lower[-1] - 2 * skinthickness)) * sparthickness 
+    
+    area = upper_area + lower_area + area_spars
+    centroid = (first_moment_area_upper + first_moment_area_lower + first_moment_area_front_spar + first_moment_area_rear_spar) / area
     
     # Then compute area moment of inertia for upward bending
     # This is calculated using derived analytical expression assuming linear interpolation between airfoil data points
@@ -113,9 +117,9 @@ def wingbox_props(chord, sparthickness, skinthickness, data_x_upper, data_x_lowe
 
     # Compute area moment of inertia for backward bending
     I_vert = 0
-    first_moment_area_left = (data_y_upper[0] - data_y_lower[0]) * sparthickness * (data_x_upper[0] + sparthickness / 2)
-    first_moment_area_right = (data_y_upper[-1] - data_y_lower[-1]) * sparthickness * (data_x_upper[-1] - sparthickness / 2)
-    centroid_Ivert = (first_moment_area_left + first_moment_area_right) / \
+    first_moment_area_front = (data_y_upper[0] - data_y_lower[0]) * sparthickness * (data_x_upper[0] + sparthickness / 2)
+    first_moment_area_rear = (data_y_upper[-1] - data_y_lower[-1]) * sparthickness * (data_x_upper[-1] - sparthickness / 2)
+    centroid_Ivert = (first_moment_area_front + first_moment_area_rear) / \
                     ( ((data_y_upper[0] - data_y_lower[0]) + (data_y_upper[-1] - data_y_lower[-1])) * sparthickness)
 
     I_vert += 1./12. * (data_y_upper[0] - data_y_lower[0]) * sparthickness**3 + (data_y_upper[0] - data_y_lower[0]) * sparthickness * (centroid_Ivert - (data_x_upper[0] + sparthickness/2))**2
@@ -124,8 +128,6 @@ def wingbox_props(chord, sparthickness, skinthickness, data_x_upper, data_x_lowe
     # Add contribution of skins
     I_vert += 2 * ( 1./12. * skinthickness * (data_x_upper[-1] - data_x_upper[0] - 2 * sparthickness)**3 + skinthickness * (data_x_upper[-1] - data_x_upper[0] - 2 * sparthickness) * (centroid_Ivert - (data_x_upper[-1] + data_x_upper[0]) / 2)**2 )
 
-    area_spar = ((data_y_upper[0] - data_y_lower[0] - 2 * skinthickness) + (data_y_upper[-1] - data_y_lower[-1] - 2 * skinthickness)) * sparthickness 
-    area += area_spar
     
     # Distances for calculating max bending stresses (KS function used)
     ks_rho = 500. # Hard coded, see Martins and Poon 2005 for more
@@ -135,10 +137,10 @@ def wingbox_props(chord, sparthickness, skinthickness, data_x_upper, data_x_lowe
     fmax_lower = np.max(-data_y_lower)
     hbottom = fmax_lower + 1 / ks_rho * np.log(np.sum(np.exp(ks_rho * (-data_y_lower - fmax_lower)))) + centroid
     
-    hleft =  centroid_Ivert - data_x_upper[0]
-    hright = data_x_upper[-1] - centroid_Ivert
+    hfront =  centroid_Ivert - data_x_upper[0]
+    hrear = data_x_upper[-1] - centroid_Ivert
     
-    return I_horiz, I_vert, Q_upper, J, area, A_enc, htop, hbottom, hleft, hright
+    return I_horiz, I_vert, Q_upper, J, area, A_enc, htop, hbottom, hfront, hrear
 
 class MaterialsTube(Component):
     """
@@ -195,8 +197,8 @@ class MaterialsTube(Component):
         self.add_output('J', val=np.ones((self.ny - 1),  dtype = complex))
         self.add_output('htop', val=np.ones((self.ny - 1),  dtype = complex))
         self.add_output('hbottom', val=np.ones((self.ny - 1),  dtype = complex))
-        self.add_output('hleft', val=np.ones((self.ny - 1),  dtype = complex))
-        self.add_output('hright', val=np.ones((self.ny - 1),  dtype = complex))
+        self.add_output('hfront', val=np.ones((self.ny - 1),  dtype = complex))
+        self.add_output('hrear', val=np.ones((self.ny - 1),  dtype = complex))
 
         self.arange = np.arange((self.ny - 1))
         
@@ -209,6 +211,6 @@ class MaterialsTube(Component):
         for i in range(self.ny - 1):
             
             unknowns['Iz'][i], unknowns['Iy'][i], unknowns['Qz'][i], unknowns['J'][i], unknowns['A'][i], unknowns['A_enc'][i],\
-            unknowns['htop'][i], unknowns['hbottom'][i], unknowns['hleft'][i], unknowns['hright'][i]  = \
+            unknowns['htop'][i], unknowns['hbottom'][i], unknowns['hfront'][i], unknowns['hrear'][i]  = \
             wingbox_props(params['chords_fem'][i], params['sparthickness'][i], params['skinthickness'][i], self.data_x_upper, \
             self.data_x_lower, self.data_y_upper, self.data_y_lower, -params['twist_fem'][i])
