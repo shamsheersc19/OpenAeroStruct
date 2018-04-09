@@ -765,7 +765,7 @@ class SpatialBeamVonMisesTube(Component):
             front_bending_stress = - E / (L**2) * (-6 * u0z + 2 * r0y * L + 6 * u1z + 4 * r1y * L ) * hfront[ielem] # this is moment * htop / I  
             rear_bending_stress = E / (L**2) * (-6 * u0z + 2 * r0y * L + 6 * u1z + 4 * r1y * L ) * hrear[ielem] # this is moment * htop / I  
             
-            vertical_shear =  E / (L**3) *(-12 * u0y - 6 * r0z * L + 12 * u1y - 6 * r1z * L ) * Qy[ielem] / sparthickness[ielem] # shear due to bending (VQ/It) note: the I used to get V cancels the other I
+            vertical_shear =  E / (L**3) *(-12 * u0y - 6 * r0z * L + 12 * u1y - 6 * r1z * L ) * Qy[ielem] / (2 * sparthickness[ielem]) # shear due to bending (VQ/It) note: the I used to get V cancels the other I
             
             # print("==========",ielem,"================")
             # print("vertical_shear", vertical_shear)
