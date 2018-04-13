@@ -234,6 +234,7 @@ class OASProblem(object):
                     'thickness_cp' : None,
                     'skinthickness_cp' : None,
                     'sparthickness_cp' : None,
+                    'toverc_cp' : None,
                     # 'radius_cp' : None,
 
                     # Geometric variables. The user generally does not need
@@ -244,7 +245,7 @@ class OASProblem(object):
                     #     'zshear_cp', 'span', 'chord_cp', 'taper', 'thickness_cp', 'radius_cp'],
                         
                     'geo_vars' : ['sweep', 'dihedral', 'twist_cp', 'xshear_cp', 'yshear_cp',
-                        'zshear_cp', 'span', 'chord_cp', 'taper', 'thickness_cp', 'sparthickness_cp', 'skinthickness_cp'],
+                        'zshear_cp', 'span', 'chord_cp', 'taper', 'thickness_cp', 'sparthickness_cp', 'skinthickness_cp', 'toverc_cp'],
                     # Aerodynamic performance of the lifting surface at
                     # an angle of attack of 0 (alpha=0).
                     # These CL0 and CD0 values are added to the CL and CD
@@ -366,7 +367,7 @@ class OASProblem(object):
         # We need to initialize some variables to ones and some others to zeros.
         # Here we define the lists for each case.
         # ones_list = ['chord_cp', 'thickness_cp', 'radius_cp']
-        ones_list = ['chord_cp', 'thickness_cp', 'sparthickness_cp', 'skinthickness_cp']
+        ones_list = ['chord_cp', 'thickness_cp', 'sparthickness_cp', 'skinthickness_cp', 'toverc_cp']
         zeros_list = ['twist_cp', 'xshear_cp', 'yshear_cp', 'zshear_cp']
         surf_dict['bsp_vars'] = ones_list + zeros_list
 
@@ -452,6 +453,8 @@ class OASProblem(object):
             surf_dict['thickness_cp'] *= np.max(surf_dict['thickness'])
             surf_dict['sparthickness_cp'] *= np.max(surf_dict['thickness'])
             surf_dict['skinthickness_cp'] *= np.max(surf_dict['thickness'])
+        if 'toverc_cp' not in surf_dict['initial_geo']:
+            surf_dict['toverc_cp'] *= np.max(surf_dict['toverc_cp'])
 
         if surf_dict['loads'] is None:
             # Set default loads at the tips
@@ -494,7 +497,7 @@ class OASProblem(object):
                 self.prob.driver.options['optimizer'] = "SNOPT"
                 self.prob.driver.opt_settings = {'Major optimality tolerance': 1e-8,
                                                  'Major feasibility tolerance': 1e-8,
-                                                 'Major iterations limit':50,
+                                                 'Major iterations limit':400,
                                                  'Minor iterations limit':2000,
                                                  'Iterations limit':1000
                                                  }
@@ -720,7 +723,7 @@ class OASProblem(object):
                 if var in desvar_names or var in surface['initial_geo'] or 'thickness' in var:
                     n_pts = surface['num_y']
                     # if var in ['thickness_cp', 'radius_cp']:
-                    if var in ['thickness_cp', 'skinthickness_cp', 'sparthickness_cp']:
+                    if var in ['thickness_cp', 'skinthickness_cp', 'sparthickness_cp', 'toverc_cp']:
                         n_pts -= 1
                     trunc_var = var.split('_')[0]
                     tmp_group.add(trunc_var + '_bsp',
@@ -799,7 +802,7 @@ class OASProblem(object):
                 if var in desvar_names or var in surface['initial_geo']:
                     n_pts = surface['num_y']
                     # if var in ['thickness_cp', 'radius_cp']:
-                    if var in ['thickness_cp', 'sparthickness_cp', 'skinthickness_cp']:
+                    if var in ['thickness_cp', 'sparthickness_cp', 'skinthickness_cp', 'toverc_cp']:
                         n_pts -= 1
                     trunc_var = var.split('_')[0]
                     tmp_group.add(trunc_var + '_bsp',
@@ -958,7 +961,7 @@ class OASProblem(object):
                 if var in desvar_names or var in surface['initial_geo'] or 'thickness' in var:
                     n_pts = surface['num_y']
                     # if var in ['thickness_cp', 'radius_cp']:
-                    if var in ['thickness_cp', 'sparthickness_cp', 'skinthickness_cp']:
+                    if var in ['thickness_cp', 'sparthickness_cp', 'skinthickness_cp', 'toverc_cp']:
                         n_pts -= 1
                     trunc_var = var.split('_')[0]
                     tmp_group.add(trunc_var + '_bsp',
@@ -1065,6 +1068,7 @@ class OASProblem(object):
             root.connect(name[:-1] + '.hrear', name + 'perf.hrear')
             root.connect(name[:-1] + '.sparthickness', name + 'perf.sparthickness')
             root.connect(name[:-1] + '.skinthickness', name + 'perf.skinthickness')
+            root.connect(name[:-1] + '.toverc', name + 'perf.toverc')
 
             # Connection performance functional variables
             root.connect(name + 'perf.structural_weight', 'total_perf.' + name + 'structural_weight')

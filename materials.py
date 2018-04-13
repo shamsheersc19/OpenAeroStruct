@@ -3,13 +3,17 @@ import numpy as np
 
 from openmdao.api import Component
 
-def wingbox_props(chord, sparthickness, skinthickness, data_x_upper, data_x_lower, data_y_upper, data_y_lower, twist=0.):
+def wingbox_props(chord, sparthickness, skinthickness, data_x_upper, data_x_lower, data_y_upper, data_y_lower, t_over_c_original, t_over_c, twist=0.):
     
     # Scale data points with chord 
     data_x_upper = chord * data_x_upper
     data_y_upper = chord * data_y_upper
     data_x_lower = chord * data_x_lower
     data_y_lower = chord * data_y_lower
+    
+    # Scale y-coordinates by t/c design variable
+    data_y_upper *= t_over_c / t_over_c_original
+    data_y_lower *= t_over_c / t_over_c_original
     
     # Compute enclosed area for torsion constant
     # This currently does not change with twist
@@ -174,6 +178,7 @@ class MaterialsTube(Component):
 
         self.ny = surface['num_y']
         self.mesh = surface['mesh']
+        self.t_over_c = surface['t_over_c']
         name = surface['name']
         
         self.data_x_upper = surface['data_x_upper']
@@ -188,6 +193,7 @@ class MaterialsTube(Component):
         
         self.add_param('sparthickness', val=np.ones((self.ny - 1), dtype = complex))
         self.add_param('skinthickness', val=np.ones((self.ny - 1),  dtype = complex))
+        self.add_param('toverc', val=np.ones((self.ny - 1),  dtype = complex))
         
         self.add_output('A', val=np.ones((self.ny - 1),  dtype = complex))
         self.add_output('A_enc', val=np.ones((self.ny - 1),  dtype = complex))
@@ -213,4 +219,4 @@ class MaterialsTube(Component):
             unknowns['Iz'][i], unknowns['Iy'][i], unknowns['Qz'][i], unknowns['J'][i], unknowns['A'][i], unknowns['A_enc'][i],\
             unknowns['htop'][i], unknowns['hbottom'][i], unknowns['hfront'][i], unknowns['hrear'][i]  = \
             wingbox_props(params['chords_fem'][i], params['sparthickness'][i], params['skinthickness'][i], self.data_x_upper, \
-            self.data_x_lower, self.data_y_upper, self.data_y_lower, -params['twist_fem'][i])
+            self.data_x_lower, self.data_y_upper, self.data_y_lower, self.t_over_c, params['toverc'][i], -params['twist_fem'][i])

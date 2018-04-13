@@ -74,7 +74,7 @@ class Display(object):
         toolbar = NavigationToolbar2TkAgg(self.canvas, self.root)
         toolbar.update()
         self.canvas._tkcanvas.pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
-        self.ax = plt.subplot2grid((4, 8), (0, 0), rowspan=4,
+        self.ax = plt.subplot2grid((5, 8), (0, 0), rowspan=5,
                                    colspan=4, projection='3d')
 
         self.num_iters = 0
@@ -94,10 +94,11 @@ class Display(object):
             self.ax4 = plt.subplot2grid((4, 8), (0, 4), rowspan=2, colspan=4)
             self.ax5 = plt.subplot2grid((4, 8), (2, 4), rowspan=2, colspan=4)
         if self.show_wing and self.show_tube:
-            self.ax2 = plt.subplot2grid((4, 8), (0, 4), colspan=4)
-            self.ax3 = plt.subplot2grid((4, 8), (1, 4), colspan=4)
-            self.ax4 = plt.subplot2grid((4, 8), (2, 4), colspan=4)
-            self.ax5 = plt.subplot2grid((4, 8), (3, 4), colspan=4)
+            self.ax2 = plt.subplot2grid((5, 8), (1, 4), colspan=4)
+            self.ax3 = plt.subplot2grid((5, 8), (0, 4), colspan=4)
+            self.ax4 = plt.subplot2grid((5, 8), (3, 4), colspan=4)
+            self.ax5 = plt.subplot2grid((5, 8), (4, 4), colspan=4)
+            self.ax6 = plt.subplot2grid((5, 8), (2, 4), colspan=4)
 
     def load_db(self):
         self.db = sqlitedict.SqliteDict(self.db_name, 'iterations')
@@ -109,6 +110,7 @@ class Display(object):
         self.thickness = []
         self.sparthickness = []
         self.skinthickness = []
+        self.toverc = []
         sec_forces = []
         normals = []
         widths = []
@@ -193,6 +195,7 @@ class Display(object):
                         self.radius.append(case_data['Unknowns'][name+'.thickness'])
                         self.sparthickness.append(case_data['Unknowns'][name+'.sparthickness'])
                         self.skinthickness.append(case_data['Unknowns'][name+'.skinthickness'])
+                        self.toverc.append(case_data['Unknowns'][name+'.toverc'])
                         self.vonmises.append(
                             np.max(case_data['Unknowns'][name+'.vonmises'], axis=1))
                         self.show_tube = True
@@ -224,6 +227,7 @@ class Display(object):
                     self.radius.append(case_data['Unknowns'][short_name+'.thickness'])
                     self.sparthickness.append(case_data['Unknowns'][short_name+'.sparthickness'])
                     self.skinthickness.append(case_data['Unknowns'][short_name+'.skinthickness'])
+                    self.toverc.append(case_data['Unknowns'][short_name+'.toverc'])
                     self.vonmises.append(
                         np.max(case_data['Unknowns'][short_name+'_perf.vonmises'], axis=1))
                     self.def_mesh.append(case_data['Unknowns'][name+'.def_mesh'])
@@ -272,6 +276,7 @@ class Display(object):
                 new_r = []
                 new_skinthickness = []
                 new_sparthickness = []
+                new_toverc = []
                 new_vonmises = []
             if self.show_wing:
                 new_twist = []
@@ -292,6 +297,8 @@ class Display(object):
                         new_sparthickness.append(np.hstack((sparthickness, sparthickness[::-1])))
                         skinthickness = self.skinthickness[i*n_names+j]
                         new_skinthickness.append(np.hstack((skinthickness, skinthickness[::-1])))
+                        toverc = self.toverc[i*n_names+j]
+                        new_toverc.append(np.hstack((toverc, toverc[::-1])))
                         r = self.radius[i*n_names+j]
                         new_r.append(np.hstack((r, r[::-1])))
                         vonmises = self.vonmises[i*n_names+j]
@@ -319,6 +326,7 @@ class Display(object):
             if self.show_tube:
                 self.skinthickness = new_skinthickness
                 self.sparthickness = new_sparthickness
+                self.toverc = new_toverc
                 self.radius = new_r
                 self.vonmises = new_vonmises
             if self.show_wing:
@@ -387,6 +395,7 @@ class Display(object):
             self.max_l += diff
         if self.show_tube:
             self.min_t, self.max_t = self.get_list_limits(self.skinthickness)
+            self.min_toc, self.max_toc = self.get_list_limits(self.toverc)
             diff = (self.max_t - self.min_t) * 0.05
             self.min_t -= diff
             self.max_t += diff
@@ -423,6 +432,13 @@ class Display(object):
             self.ax4.set_ylim([self.min_t, self.max_t])
             self.ax4.set_xlim([-1, 1])
             self.ax4.set_ylabel('thickness [m]', rotation="horizontal", ha="right")
+            
+            self.ax6.cla()
+            self.ax6.locator_params(axis='y',nbins=4)
+            self.ax6.locator_params(axis='x',nbins=3)
+            self.ax6.set_ylim([self.min_toc, self.max_toc])
+            self.ax6.set_xlim([-1, 1])
+            self.ax6.set_ylabel('thickness to chord', rotation="horizontal", ha="right")
 
             self.ax5.cla()
             max_yield_stress = 0.
@@ -458,6 +474,7 @@ class Display(object):
             if self.show_tube:
                 skinthick = self.skinthickness[self.curr_pos*n_names+j]
                 sparthick = self.sparthickness[self.curr_pos*n_names+j]
+                toverc = self.toverc[self.curr_pos*n_names+j]
                 vm_vals = self.vonmises[self.curr_pos*n_names+j]
 
                 self.ax4.plot(span_diff, skinthick, lw=2, c='b')
@@ -467,6 +484,7 @@ class Display(object):
                 self.ax4.text(0.05, 0.6, 'spar',
                     transform=self.ax4.transAxes, color='g')
                 self.ax5.plot(span_diff, vm_vals, lw=2, c='b')
+                self.ax6.plot(span_diff, toverc, lw=2, c='k')
 
     def plot_wing(self):
 

@@ -51,20 +51,19 @@ if __name__ == "__main__":
     OAS_prob = OASProblem(prob_dict)
 
                  
-    surf_dict = {'num_y' : 51,
+    surf_dict = {'num_y' : 31,
                  'num_x' : 3,
                  'exact_failure_constraint' : False,
                  'wing_type' : 'CRM',
                  'span_cos_spacing' : 0,
                  'CD0' : 0.015,
                  'symmetry' : True,
-                 'num_twist_cp' : 5,
-                 'num_thickness_cp' : 5,
                  'twist_cp' : np.array([0., 0., 0., 0., 0.]),
                  'thickness_cp' : np.array([0.01, 0.02, 0.03, 0.03, 0.03]), # this thickness variable does not do anything, but keep it for now because run_classes expects it. This will be fixed later.
                  # The following two are thickness variables that differ from the thickness variable in the standard OAS.
                  'skinthickness_cp' : np.array([0.01, 0.02, 0.03, 0.03, 0.03]),
                  'sparthickness_cp' : np.array([0.01, 0.02, 0.03, 0.03, 0.03]),
+                 'toverc_cp' : np.array([0.14, 0.14, 0.14, 0.14, 0.14]),
                 # Material properties taken from http://www.performance-composites.com/carbonfibre/mechanicalproperties_2.asp
                 # 'E' : 45.e9,
                 # 'G' : 15.e9,
@@ -90,6 +89,7 @@ if __name__ == "__main__":
                  'data_y_lower' : np.array([-0.0585, -0.0606, -0.0633, -0.0647, -0.0666, -0.068,  -0.0687, 
                                              -0.0692, -0.0696, -0.0696, -0.0692, -0.0688, -0.0676, -0.0657, -0.0644, -0.0614, 
                                              -0.0588, -0.0543, -0.0509, -0.0451, -0.041], dtype = 'complex128'),
+                't_over_c' : 0.14 # maximum t/c of the selected airfoil
                 }
 
     # Add the specified wing surface to the problem
@@ -99,11 +99,13 @@ if __name__ == "__main__":
     # OAS_prob.add_desvar('alpha', lower=-10., upper=10.)
     OAS_prob.add_constraint('L_equals_W', equals=0.)
     OAS_prob.add_objective('fuelburn', scaler=1e-5)
+    OAS_prob.add_constraint('coupled.wing.S_ref', lower=414.1)
 
     # Setup problem and add design variables, constraint, and objective
     OAS_prob.add_desvar('wing.twist_cp', lower=-10., upper=10.)
     OAS_prob.add_desvar('wing.sparthickness_cp', lower=0.002, upper=0.1, scaler=1e2)
     OAS_prob.add_desvar('wing.skinthickness_cp', lower=0.002, upper=0.1, scaler=1e2)
+    OAS_prob.add_desvar('wing.toverc_cp', lower=0.06, upper=0.14, scaler=10.)
     OAS_prob.add_constraint('wing_perf.failure', upper=0.)
     OAS_prob.add_desvar('wing.span', lower=10., upper=100.)
     OAS_prob.add_desvar('wing.sweep', lower=-60., upper=60.)
@@ -118,6 +120,7 @@ if __name__ == "__main__":
     print(OAS_prob.prob['wing.thickness_cp'])
     print(OAS_prob.prob['wing.skinthickness_cp'])
     print(OAS_prob.prob['wing.sparthickness_cp'])
+    print(OAS_prob.prob['wing.toverc_cp'])
     # print(OAS_prob.prob['wing_perf.disp'])
     print(OAS_prob.prob['wing_perf.structural_weight'])
     print("Span", OAS_prob.prob['wing.span'],"m")

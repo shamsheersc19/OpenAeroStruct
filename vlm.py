@@ -1523,6 +1523,7 @@ class ViscousDrag(Component):
         self.add_param('widths', val=np.zeros((ny-1)))
         self.add_param('lengths', val=np.zeros((ny)))
         self.add_param('CL', val=0.)
+        self.add_param('toverc', val=np.ones((ny - 1),  dtype = complex))
         self.add_output('CDv', val=0.)
         self.with_viscous = with_viscous
         
@@ -1538,6 +1539,7 @@ class ViscousDrag(Component):
             widths = params['widths']
             lengths = params['lengths']
             cos_sweep = params['cos_sweep'] / widths
+            t_over_c = params['toverc']
 
             # Take panel chord length to be average of its edge lengths
             chords = (lengths[1:] + lengths[:-1]) / 2.
@@ -1566,7 +1568,7 @@ class ViscousDrag(Component):
 
             # Calculate form factor (Raymer Eq. 12.30)
             self.k_FF = 1.34 * M**0.18 * \
-                (1.0 + 0.6*self.t_over_c/self.c_max_t + 100*self.t_over_c**4)
+                (1.0 + 0.6*t_over_c/self.c_max_t + 100*t_over_c**4)
             FF = self.k_FF * cos_sweep**0.28
 
             # Sum individual panel drags to get total drag
@@ -1575,14 +1577,16 @@ class ViscousDrag(Component):
             unknowns['CDv'] = self.D_over_q / S_ref
             
             # Wave drag estimate
-            avg_cos_sweep = np.mean(cos_sweep)
-            MDD = 0.95 / avg_cos_sweep - self.t_over_c / avg_cos_sweep**2 - params['CL'] / (10*avg_cos_sweep**3)
+
+            t_over_c_weighted = np.sum(t_over_c * chords) / np.sum(chords) # weighted average of t/c
+            # avg_cos_sweep = np.mean(cos_sweep)
+            avg_cos_sweep = np.sum(cos_sweep * chords) / np.sum(chords) # weighted average of 1/4 chord sweep
+            MDD = 0.95 / avg_cos_sweep - t_over_c_weighted / avg_cos_sweep**2 - params['CL'] / (10*avg_cos_sweep**3)
             Mcrit = MDD - (0.1 / 80.)**(1./3.)
             if M > Mcrit:
                 CDwave = 20*(M - Mcrit)**4
                 unknowns['CDv'] += CDwave
-            
-            
+
             if self.surface['symmetry']:
                 unknowns['CDv'] *= 2
         else:
