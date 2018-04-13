@@ -156,7 +156,6 @@ if __name__ == "__main__":
 
     print("\nFuelburn:", OAS_prob.prob['fuelburn'])
     print("Time elapsed: {} secs".format(time() - st))
-    print(OAS_prob.prob['wing.thickness_cp'])
     print(OAS_prob.prob['wing.skinthickness_cp'])
     print(OAS_prob.prob['wing.sparthickness_cp'])
     print(OAS_prob.prob['wing.toverc_cp'])
