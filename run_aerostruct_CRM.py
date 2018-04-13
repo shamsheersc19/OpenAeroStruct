@@ -59,22 +59,16 @@ if __name__ == "__main__":
                  'CD0' : 0.015,
                  'symmetry' : True,
                  'twist_cp' : np.array([0., 0., 0., 0., 0.]),
-                 'thickness_cp' : np.array([0.01, 0.02, 0.03, 0.03, 0.03]), # this thickness variable does not do anything, but keep it for now because run_classes expects it. This will be fixed later.
                  # The following two are thickness variables that differ from the thickness variable in the standard OAS.
                  'skinthickness_cp' : np.array([0.01, 0.02, 0.03, 0.03, 0.03]),
                  'sparthickness_cp' : np.array([0.01, 0.02, 0.03, 0.03, 0.03]),
                  'toverc_cp' : np.array([0.14, 0.14, 0.14, 0.14, 0.14]),
-                # Material properties taken from http://www.performance-composites.com/carbonfibre/mechanicalproperties_2.asp
-                # 'E' : 45.e9,
-                # 'G' : 15.e9,
-                # 'yield' : 350.e6 / 2.0,
-                # 'mrho' : 1.6e3,
-                'E' : 70.e9,            # [Pa] Young's modulus of the spar
-                'G' : 30.e9,            # [Pa] shear modulus of the spar
-                'yield' : 324.e6/ 2.5 / 1.5, # [Pa] yield stress divided by 2.5 for limiting case
-                'mrho' : 2.8e3,          # [kg/m^3] material density
-                'strength_factor_for_upper_skin' : 1.4, # for the upper skin, the yield stress is multiplied by this factor
-                'sweep' : -20.,
+                 'E' : 70.e9,            # [Pa] Young's modulus of the spar
+                 'G' : 30.e9,            # [Pa] shear modulus of the spar
+                 'yield' : 324.e6/ 2.5 / 1.5, # [Pa] yield stress divided by 2.5 for limiting case
+                 'mrho' : 2.8e3,          # [kg/m^3] material density
+                 'strength_factor_for_upper_skin' : 1.4, # for the upper skin, the yield stress is multiplied by this factor
+                 'sweep' : -20.,
                  # The following are the airfoil coordinates for the wingbox section (e.g., from 15% to 65%)
                  # The chord for the corresponding airfoil should be 1
                  # The first and last x-coordinates of the upper and lower skins must be the same
@@ -89,7 +83,7 @@ if __name__ == "__main__":
                  'data_y_lower' : np.array([-0.0585, -0.0606, -0.0633, -0.0647, -0.0666, -0.068,  -0.0687, 
                                              -0.0692, -0.0696, -0.0696, -0.0692, -0.0688, -0.0676, -0.0657, -0.0644, -0.0614, 
                                              -0.0588, -0.0543, -0.0509, -0.0451, -0.041], dtype = 'complex128'),
-                't_over_c' : 0.14 # maximum t/c of the selected airfoil
+                 't_over_c' : 0.14 # maximum t/c of the selected airfoil
                 }
 
     # Add the specified wing surface to the problem

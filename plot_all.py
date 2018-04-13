@@ -107,7 +107,6 @@ class Display(object):
         self.mesh = []
         self.def_mesh = []
         self.radius = []
-        self.thickness = []
         self.sparthickness = []
         self.skinthickness = []
         self.toverc = []
@@ -192,7 +191,7 @@ class Display(object):
                     self.mesh.append(case_data['Unknowns'][name+'.mesh'])
 
                     try:
-                        self.radius.append(case_data['Unknowns'][name+'.thickness'])
+                        self.radius.append(case_data['Unknowns'][name+'.skinthickness'])
                         self.sparthickness.append(case_data['Unknowns'][name+'.sparthickness'])
                         self.skinthickness.append(case_data['Unknowns'][name+'.skinthickness'])
                         self.toverc.append(case_data['Unknowns'][name+'.toverc'])
@@ -224,7 +223,7 @@ class Display(object):
                     short_name = name.split('.')[1:][0]
 
                     self.mesh.append(case_data['Unknowns'][short_name+'.mesh'])
-                    self.radius.append(case_data['Unknowns'][short_name+'.thickness'])
+                    self.radius.append(case_data['Unknowns'][short_name+'.skinthickness'])
                     self.sparthickness.append(case_data['Unknowns'][short_name+'.sparthickness'])
                     self.skinthickness.append(case_data['Unknowns'][short_name+'.skinthickness'])
                     self.toverc.append(case_data['Unknowns'][short_name+'.toverc'])
