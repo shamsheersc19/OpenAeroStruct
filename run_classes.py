@@ -423,7 +423,17 @@ class OASProblem(object):
         # surf_dict['radius'] = radius
 
         # Set initial thicknesses
-        surf_dict['skinthickness'] = chord_fem / 10
+        surf_dict['skinthickness'] = chord_fem.real / 20
+        
+        if surf_dict['skinthickness_cp'] is None:
+            surf_dict['skinthickness_cp'] = np.ones(surf_dict['num_' + 'skinthickness_cp'], dtype=data_type)
+            surf_dict['skinthickness_cp'] *= np.max(surf_dict['skinthickness'])
+        if surf_dict['sparthickness_cp'] is None:
+            surf_dict['sparthickness_cp'] = np.ones(surf_dict['num_' + 'sparthickness_cp'], dtype=data_type)
+            surf_dict['sparthickness_cp'] *= np.max(surf_dict['skinthickness'])
+        if surf_dict['toverc_cp'] is None:
+            surf_dict['toverc_cp'] = np.ones(surf_dict['num_' + 'toverc_cp'], dtype=data_type)
+            surf_dict['toverc_cp'] = surf_dict['toverc_cp'] * (np.max(surf_dict['t_over_c']))
 
         # We now loop through the possible bspline variables and populate
         # the 'initial_geo' list with the variables that the geometry
@@ -451,12 +461,6 @@ class OASProblem(object):
             # then include that in the initial_geo list
             elif var in input_dict.keys():
                 surf_dict['initial_geo'].append(var)
-
-        if 'skinthickness_cp' not in surf_dict['initial_geo']:
-            surf_dict['sparthickness_cp'] *= np.max(surf_dict['skinthickness'])
-            surf_dict['skinthickness_cp'] *= np.max(surf_dict['skinthickness'])
-        if 'toverc_cp' not in surf_dict['initial_geo']:
-            surf_dict['toverc_cp'] *= np.max(surf_dict['toverc_cp'])
 
         if surf_dict['loads'] is None:
             # Set default loads at the tips
