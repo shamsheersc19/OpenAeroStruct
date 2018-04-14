@@ -12,6 +12,8 @@ The larger the number, the closer the view. Floats or ints are accepted.
 
 Ex: `python plot_all.py aero.db 1` a wider view than `python plot_all.py aero.db 5`.
 
+Also note that the le_te.npy file should also be available when this is run.
+
 """
 
 
@@ -76,6 +78,7 @@ class Display(object):
         self.canvas._tkcanvas.pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
         self.ax = plt.subplot2grid((5, 8), (0, 0), rowspan=5,
                                    colspan=4, projection='3d')
+        self.ax.set_aspect('equal')
 
         self.num_iters = 0
         self.db_name = db_name
@@ -492,6 +495,12 @@ class Display(object):
         az = self.ax.azim
         el = self.ax.elev
         dist = self.ax.dist
+        
+        try:
+            # for wingbox viz
+            le_te = np.load('le_te.npy')
+        except:
+            print('le_te.npy file not found'); exit()
 
         for j, name in enumerate(self.names):
             mesh0 = self.mesh[self.curr_pos*n_names+j].copy()
@@ -503,6 +512,19 @@ class Display(object):
                 x = mesh0[:, :, 0]
                 y = mesh0[:, :, 1]
                 z = mesh0[:, :, 2]
+                
+                #################### for wingbox viz ####################
+                mesh1 = np.zeros((2,mesh0.shape[1],mesh0.shape[2]))
+                mesh1[0,:,:] = mesh0[0,:,:]
+                mesh1[1,:,:] = mesh0[-1,:,:]
+                chord_vec = mesh1[1,:,:] - mesh1[0,:,:]
+                mesh1[0,:,:] = mesh1[0,:,:] + le_te[0] * chord_vec
+                mesh1[1,:,:] = mesh1[1,:,:] - (1 - le_te[1]) * chord_vec
+                
+                x_box = mesh1[:, :, 0]
+                y_box = mesh1[:, :, 1]
+                z_box = mesh1[:, :, 2]
+                #########################################################
 
                 try:  # show deformed mesh option may not be available
                     if self.show_def_mesh.get():
@@ -518,74 +540,77 @@ class Display(object):
                             def_mesh0 = (def_mesh0 - mesh0) * 2 + def_mesh0
                         self.ax.plot_wireframe(x_def, y_def, z_def, rstride=1, cstride=1, color='k')
                         self.ax.plot_wireframe(x, y, z, rstride=1, cstride=1, color='k', alpha=.3)
+                        self.ax.plot_surface(x_box, y_box, z_box, rstride=1, cstride=1, color='k', alpha=0.5) # wingbox viz
                     else:
                         self.ax.plot_wireframe(x, y, z, rstride=1, cstride=1, color='k')
+                        self.ax.plot_surface(x_box, y_box, z_box, rstride=1, cstride=1, color='k', alpha=0.5) # wingbox viz
                         self.c2.grid_forget()
                 except:
                     self.ax.plot_wireframe(x, y, z, rstride=1, cstride=1, color='k')
+                    self.ax.plot_surface(x_box, y_box, z_box, rstride=1, cstride=1, color='k', alpha=0.5) # wingbox viz
 
                 cg = self.cg[self.curr_pos]
                 # self.ax.scatter(cg[0], cg[1], cg[2], s=100, color='r')
 
-            if self.show_tube:
-                # Get the array of radii and thickness values for the FEM system
-                r0 = self.radius[self.curr_pos*n_names+j]
-                t0 = self.radius[self.curr_pos*n_names+j]#self.thickness[self.curr_pos*n_names+j]
-
-                # Create a normalized array of values for the colormap
-                colors = t0
-                colors = colors / np.max(colors)
-
-                # Set the number of rectangular patches on the cylinder
-                num_circ = 12
-                fem_origin = self.fem_origin_dict[name.split('.')[-1] + '_fem_origin']
-
-                # Get the number of spanwise nodal points
-                n = mesh0.shape[1]
-
-                # Create an array of angles around a circle
-                p = np.linspace(0, 2*np.pi, num_circ)
-
-                # This is just to show the deformed mesh if selected
-                if self.show_wing:
-                    if self.show_def_mesh.get():
-                        mesh0[:, :, 2] = def_mesh0[:, :, 2]
-
-                # Loop through each element in the FEM system
-                for i, thick in enumerate(t0):
-
-                    # Get the radii describing the circles at each nodal point
-                    r = np.array((r0[i], r0[i]))
-                    R, P = np.meshgrid(r, p)
-
-                    # Get the X and Z coordinates for all points around the circle
-                    X, Z = R*np.cos(P), R*np.sin(P)
-
-                    # Get the chord and center location for the FEM system
-                    chords = mesh0[-1, :, 0] - mesh0[0, :, 0]
-                    comp = fem_origin * chords + mesh0[0, :, 0]
-
-                    # Add the location of the element centers to the circle coordinates
-                    X[:, 0] += comp[i]
-                    X[:, 1] += comp[i+1]
-                    Z[:, 0] += fem_origin * (mesh0[-1, i, 2] - mesh0[0, i, 2]) + mesh0[0, i, 2]
-                    Z[:, 1] += fem_origin * (mesh0[-1, i+1, 2] - mesh0[0, i+1, 2]) + mesh0[0, i+1, 2]
-
-                    # Get the spanwise locations of the spar points
-                    Y = np.empty(X.shape)
-                    Y[:] = np.linspace(mesh0[0, i, 1], mesh0[0, i+1, 1], 2)
-
-                    # Set the colors of the rectangular surfaces
-                    col = np.zeros(X.shape)
-                    col[:] = colors[i]
-
-                    # Plot the rectangular surfaces for each individual FEM element
-                    try:
-                        self.ax.plot_surface(X, Y, Z, rstride=1, cstride=1,
-                            facecolors=cm.viridis(col), linewidth=0)
-                    except:
-                        self.ax.plot_surface(X, Y, Z, rstride=1, cstride=1,
-                            facecolors=cm.coolwarm(col), linewidth=0)
+            # if self.show_tube:
+            #     # Get the array of radii and thickness values for the FEM system
+            #     r0 = self.radius[self.curr_pos*n_names+j]
+            #     t0 = self.radius[self.curr_pos*n_names+j]#self.thickness[self.curr_pos*n_names+j]
+            # 
+            #     # Create a normalized array of values for the colormap
+            #     colors = t0
+            #     colors = colors / np.max(colors)
+            # 
+            #     # Set the number of rectangular patches on the cylinder
+            #     num_circ = 12
+            #     fem_origin = self.fem_origin_dict[name.split('.')[-1] + '_fem_origin']
+            # 
+            #     # Get the number of spanwise nodal points
+            #     n = mesh0.shape[1]
+            # 
+            #     # Create an array of angles around a circle
+            #     p = np.linspace(0, 2*np.pi, num_circ)
+            # 
+            #     # This is just to show the deformed mesh if selected
+            #     if self.show_wing:
+            #         if self.show_def_mesh.get():
+            #             mesh0[:, :, 2] = def_mesh0[:, :, 2]
+            # 
+            #     # Loop through each element in the FEM system
+            #     for i, thick in enumerate(t0):
+            # 
+            #         # Get the radii describing the circles at each nodal point
+            #         r = np.array((r0[i], r0[i]))
+            #         R, P = np.meshgrid(r, p)
+            # 
+            #         # Get the X and Z coordinates for all points around the circle
+            #         X, Z = R*np.cos(P), R*np.sin(P)
+            # 
+            #         # Get the chord and center location for the FEM system
+            #         chords = mesh0[-1, :, 0] - mesh0[0, :, 0]
+            #         comp = fem_origin * chords + mesh0[0, :, 0]
+            # 
+            #         # Add the location of the element centers to the circle coordinates
+            #         X[:, 0] += comp[i]
+            #         X[:, 1] += comp[i+1]
+            #         Z[:, 0] += fem_origin * (mesh0[-1, i, 2] - mesh0[0, i, 2]) + mesh0[0, i, 2]
+            #         Z[:, 1] += fem_origin * (mesh0[-1, i+1, 2] - mesh0[0, i+1, 2]) + mesh0[0, i+1, 2]
+            # 
+            #         # Get the spanwise locations of the spar points
+            #         Y = np.empty(X.shape)
+            #         Y[:] = np.linspace(mesh0[0, i, 1], mesh0[0, i+1, 1], 2)
+            # 
+            #         # Set the colors of the rectangular surfaces
+            #         col = np.zeros(X.shape)
+            #         col[:] = colors[i]
+            # 
+            #         # Plot the rectangular surfaces for each individual FEM element
+            #         try:
+            #             self.ax.plot_surface(X, Y, Z, rstride=1, cstride=1,
+            #                 facecolors=cm.viridis(col), linewidth=0)
+            #         except:
+            #             self.ax.plot_surface(X, Y, Z, rstride=1, cstride=1,
+            #                 facecolors=cm.coolwarm(col), linewidth=0)
 
         lim = 0.
         for j in range(n_names):

@@ -34,7 +34,7 @@ if __name__ == "__main__":
                  'with_viscous' : True,
                 #  'force_fd' : True,
                  'optimizer': 'SNOPT',
-                 'alpha' : 2.,            # [degrees] angle of attack
+                 'alpha' : 0., # [degrees] angle of attack (keep at 0)
                  'cg' : np.array([30., 0., 5.]),
                  'solver_combo' : solver_options[0],
                  'solver_atol' : solver_atol,
@@ -58,7 +58,7 @@ if __name__ == "__main__":
                  'span_cos_spacing' : 0,
                  'CD0' : 0.015,
                  'symmetry' : True,
-                 'twist_cp' : np.array([0., 0., 0., 0., 0.]),
+                 'twist_cp' : np.array([3., 3., 3., 3., 3.]),
                  # The following two are thickness variables that differ from the thickness variable in the standard OAS.
                  'skinthickness_cp' : np.array([0.01, 0.02, 0.03, 0.03, 0.03]),
                  'sparthickness_cp' : np.array([0.01, 0.02, 0.03, 0.03, 0.03]),
@@ -68,7 +68,7 @@ if __name__ == "__main__":
                  'yield' : 324.e6/ 2.5 / 1.5, # [Pa] yield stress divided by 2.5 for limiting case
                  'mrho' : 2.8e3,          # [kg/m^3] material density
                  'strength_factor_for_upper_skin' : 1.4, # for the upper skin, the yield stress is multiplied by this factor
-                 'sweep' : -20.,
+                 'sweep' : 0.,
                  # The following are the airfoil coordinates for the wingbox section (e.g., from 15% to 65%)
                  # The chord for the corresponding airfoil should be 1
                  # The first and last x-coordinates of the upper and lower skins must be the same

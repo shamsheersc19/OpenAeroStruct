@@ -49,7 +49,7 @@ if __name__ == "__main__":
                  'print_level' : 1,
                  'Re' : 12e6,             # Reynolds number
                  'reynolds_length' : MAC, # characteristic Reynolds length
-                 'alpha' : 2.,            # [degrees] angle of attack
+                 'alpha' : 0.,            # [degrees] angle of attack (keep at 0)
                  'M' : 0.5,              # Mach number at cruise
                  'rho' : 0.57,            # [kg/m^3] air density at 24,000 ft
                  'a' : 311.,              # [m/s] speed of sound at 24,000 ft
@@ -102,7 +102,7 @@ if __name__ == "__main__":
                  'symmetry' : True,
                  'num_twist_cp' : 5,
                  'num_thickness_cp' : 5,
-                 'twist_cp' : np.array([0., 0., 0., 0., 0.]),
+                 'twist_cp' : np.array([3., 3., 3., 3., 3.]),
                  # The following two are thickness variables that differ from the thickness variable in the standard OAS.
                  'skinthickness_cp' : np.array([0.01, 0.02, 0.03, 0.03, 0.03]),
                  'sparthickness_cp' : np.array([0.01, 0.02, 0.03, 0.03, 0.03]),

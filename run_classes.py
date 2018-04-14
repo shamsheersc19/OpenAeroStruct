@@ -307,6 +307,9 @@ class OASProblem(object):
         # Get defaults and update surface with the user-provided input
         surf_dict = self.get_default_surf_dict()
         surf_dict.update(input_dict)
+        
+        le_te_coords = np.array([surf_dict['data_x_upper'][0].real, surf_dict['data_x_upper'][-1].real])
+        np.save('le_te', le_te_coords)
 
         # Check to see if the user provides the mesh points. If they do,
         # get the chordwise and spanwise number of points
