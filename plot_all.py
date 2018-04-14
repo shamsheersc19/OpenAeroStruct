@@ -521,9 +521,45 @@ class Display(object):
                 mesh1[0,:,:] = mesh1[0,:,:] + le_te[0] * chord_vec
                 mesh1[1,:,:] = mesh1[1,:,:] - (1 - le_te[1]) * chord_vec
                 
+                half_len_toverc = int(len(self.toverc[self.curr_pos*n_names+j]) / 2)
+                tovercarray = np.zeros((len(self.toverc[self.curr_pos*n_names+j])+1))
+                tovercarray[:half_len_toverc] = self.toverc[self.curr_pos*n_names+j][:half_len_toverc]
+                tovercarray[half_len_toverc] = self.toverc[self.curr_pos*n_names+j][half_len_toverc]
+                tovercarray[half_len_toverc+1:-1] = self.toverc[self.curr_pos*n_names+j][half_len_toverc:-1]
+                chord_array = np.zeros((chord_vec.shape[0]))
+                for i in range(chord_vec.shape[0]):
+                    chord_array[i] = np.linalg.norm(chord_vec[i,:])
+                
+                # for the skins
                 x_box = mesh1[:, :, 0]
                 y_box = mesh1[:, :, 1]
-                z_box = mesh1[:, :, 2]
+                z_box = mesh1[:, :, 2] - tovercarray / 2 *chord_array
+                z_box2 =  mesh1[:, :, 2] + tovercarray / 2 *chord_array
+                
+                # for the rear spar
+                mesh2 = mesh1.copy()
+                mesh2[0,:,:] = mesh1[-1,:,:]
+                mesh2[1,:,:] = mesh1[-1,:,:]
+                
+                mesh2[0, :, 2] = mesh2[0, :, 2] - tovercarray / 2 *chord_array
+                mesh2[1, :, 2] = mesh2[1, :, 2] + tovercarray / 2 *chord_array
+                
+                x_box3 = mesh2[:, :, 0]
+                y_box3 = mesh2[:, :, 1]
+                z_box3 = mesh2[:, :, 2]
+                
+                # for the forward spar
+                mesh3 = mesh1.copy()
+                mesh3[0,:,:] = mesh1[0,:,:]
+                mesh3[1,:,:] = mesh1[0,:,:]
+                
+                mesh3[0, :, 2] = mesh3[0, :, 2] - tovercarray / 2 *chord_array
+                mesh3[1, :, 2] = mesh3[1, :, 2] + tovercarray / 2 *chord_array
+                
+                x_box4 = mesh3[:, :, 0]
+                y_box4 = mesh3[:, :, 1]
+                z_box4 = mesh3[:, :, 2]
+                
                 #########################################################
 
                 try:  # show deformed mesh option may not be available
@@ -540,14 +576,23 @@ class Display(object):
                             def_mesh0 = (def_mesh0 - mesh0) * 2 + def_mesh0
                         self.ax.plot_wireframe(x_def, y_def, z_def, rstride=1, cstride=1, color='k')
                         self.ax.plot_wireframe(x, y, z, rstride=1, cstride=1, color='k', alpha=.3)
-                        self.ax.plot_surface(x_box, y_box, z_box, rstride=1, cstride=1, color='k', alpha=0.5) # wingbox viz
+                        self.ax.plot_surface(x_box, y_box, z_box, rstride=1, cstride=1, color='k', alpha=0.25) # wingbox viz
+                        self.ax.plot_surface(x_box, y_box, z_box2, rstride=1, cstride=1, color='k', alpha=0.25) # wingbox viz
+                        self.ax.plot_surface(x_box3, y_box3, z_box3, rstride=1, cstride=1, color='k', alpha=0.25) # wingbox viz
+                        self.ax.plot_surface(x_box4, y_box4, z_box4, rstride=1, cstride=1, color='k', alpha=0.25) # wingbox viz
                     else:
                         self.ax.plot_wireframe(x, y, z, rstride=1, cstride=1, color='k')
-                        self.ax.plot_surface(x_box, y_box, z_box, rstride=1, cstride=1, color='k', alpha=0.5) # wingbox viz
+                        self.ax.plot_surface(x_box, y_box, z_box, rstride=1, cstride=1, color='k', alpha=0.25) # wingbox viz
+                        self.ax.plot_surface(x_box, y_box, z_box2, rstride=1, cstride=1, color='k', alpha=0.25) # wingbox viz
+                        self.ax.plot_surface(x_box3, y_box3, z_box3, rstride=1, cstride=1, color='k', alpha=0.25) # wingbox viz
+                        self.ax.plot_surface(x_box4, y_box4, z_box4, rstride=1, cstride=1, color='k', alpha=0.25) # wingbox viz
                         self.c2.grid_forget()
                 except:
                     self.ax.plot_wireframe(x, y, z, rstride=1, cstride=1, color='k')
-                    self.ax.plot_surface(x_box, y_box, z_box, rstride=1, cstride=1, color='k', alpha=0.5) # wingbox viz
+                    self.ax.plot_surface(x_box, y_box, z_box, rstride=1, cstride=1, color='k', alpha=0.25) # wingbox viz
+                    self.ax.plot_surface(x_box, y_box, z_box2, rstride=1, cstride=1, color='k', alpha=0.25) # wingbox viz
+                    self.ax.plot_surface(x_box3, y_box3, z_box3, rstride=1, cstride=1, color='k', alpha=0.25) # wingbox viz
+                    self.ax.plot_surface(x_box4, y_box4, z_box4, rstride=1, cstride=1, color='k', alpha=0.25) # wingbox viz
 
                 cg = self.cg[self.curr_pos]
                 # self.ax.scatter(cg[0], cg[1], cg[2], s=100, color='r')
