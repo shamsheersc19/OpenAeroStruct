@@ -1211,3 +1211,295 @@ class OASProblem(object):
 
         # Actually set up the system
         self.setup_prob()
+        
+    def setup_coupled_group(self, g_factor, name_orig):
+
+        original_g = self.prob_dict['g']
+        new_g = original_g * g_factor
+        self.prob_dict['g'] = new_g
+
+        root = self.prob.root
+        coupled = Group()
+
+        # Loop over each surface in the surfaces list
+        for surface in self.surfaces:
+
+            # Get the surface name and create a group to contain components
+            # only for this surface
+            name = surface['name']
+
+            # Add components to the 'coupled' group for each surface.
+            # The 'coupled' group must contain all components and parameters
+            # needed to converge the aerostructural system.
+            tmp_group = Group()
+            tmp_group.add('def_mesh',
+                     TransferDisplacements(surface),
+                     promotes=['*'])
+            tmp_group.add('aero_geom',
+                     VLMGeometry(surface),
+                     promotes=['*'])
+            tmp_group.add('struct_states',
+                     SpatialBeamStates(surface),
+                     promotes=['*'])
+            tmp_group.struct_states.ln_solver = LinearGaussSeidel()
+            tmp_group.struct_states.ln_solver.options['atol'] = 1e-20
+
+            name = name_orig
+            coupled.add(name[:-1], tmp_group, promotes=[])
+
+            # Add a loads component to the coupled group
+            coupled.add(name_orig + 'loads', TransferLoads(surface), promotes=[])
+
+            # Add a performance group which evaluates the data after solving
+            # the coupled system
+            tmp_group = Group()
+
+            tmp_group.add('struct_funcs',
+                     SpatialBeamFunctionals(surface),
+                     promotes=['*'])
+            tmp_group.add('aero_funcs',
+                     VLMFunctionals(surface, self.prob_dict),
+                     promotes=['*'])
+
+            if g_factor == 1.:
+                root.add(name_orig + 'perf', tmp_group, promotes=["v", "re", "M"])
+                root.add_metadata(surface['name'] + 'yield_stress', surface['yield'])
+                root.add_metadata(surface['name'] + 'fem_origin', surface['fem_origin'])
+                coupled_name = 'coupled.'
+                perf_name = 'perf.'
+                alpha_name = 'alpha'
+                rho_name = 'rho'
+                total_perf_name = 'total_perf.'
+            else:
+                root.add(name_orig + 'perf_25g', tmp_group, promotes=["v", "re", "M"])
+                coupled_name = 'coupled_25g.'
+                perf_name = 'perf_25g.'
+                alpha_name = 'alpha_25g'
+                rho_name = 'rho_25g'
+                total_perf_name = 'total_perf_25g.'
+            root.connect(alpha_name, coupled_name + 'alpha')
+            root.connect(alpha_name, name_orig + perf_name + 'alpha')
+            root.connect(rho_name, coupled_name + 'rho')
+            root.connect(rho_name, name_orig + perf_name + 'rho')
+
+        # Add a single 'aero_states' component for the whole system within the
+        # coupled group.
+        coupled.add('aero_states',
+                 VLMStates(self.surfaces),
+                 promotes=['v', 'alpha', 'rho'])
+
+        # Explicitly connect parameters from each surface's group and the common
+        # 'aero_states' group.
+        for surface in self.surfaces:
+            name = surface['name']
+
+            root.connect(name[:-1] + '.K', coupled_name + name[:-1] + '.K')
+
+            # Perform the connections with the modified names within the
+            # 'aero_states' group.
+            root.connect(coupled_name + name[:-1] + '.def_mesh', coupled_name + 'aero_states.' + name + 'def_mesh')
+            root.connect(coupled_name + name[:-1] + '.b_pts', coupled_name + 'aero_states.' + name + 'b_pts')
+            root.connect(coupled_name + name[:-1] + '.c_pts', coupled_name + 'aero_states.' + name + 'c_pts')
+            root.connect(coupled_name + name[:-1] + '.normals', coupled_name + 'aero_states.' + name + 'normals')
+
+            # Connect the results from 'aero_states' to the performance groups
+            root.connect(coupled_name + 'aero_states.' + name + 'sec_forces', name + perf_name + 'sec_forces')
+
+            # Connect the results from 'coupled' to the performance groups
+            root.connect(coupled_name + name[:-1] + '.def_mesh', coupled_name + name + 'loads.def_mesh')
+            root.connect(coupled_name + 'aero_states.' + name + 'sec_forces', coupled_name + name + 'loads.sec_forces')
+
+            # Connect the output of the loads component with the FEM
+            # displacement parameter. This links the coupling within the coupled
+            # group that necessitates the subgroup solver.
+            root.connect(coupled_name + name + 'loads.loads', coupled_name + name[:-1] + '.loads')
+
+            # Connect aerodyamic mesh to coupled group mesh
+            root.connect(name[:-1] + '.mesh', coupled_name + name[:-1] + '.mesh')
+
+            # Connect performance calculation variables
+            root.connect(name[:-1] + '.radius', name + perf_name + 'radius')
+            root.connect(name[:-1] + '.A', name + perf_name + 'A')
+            root.connect(name[:-1] + '.thickness', name + perf_name + 'thickness')
+
+            # Connect parameters from the 'coupled' group to the performance
+            # groups for the individual surfaces.
+            root.connect(name[:-1] + '.nodes', name + perf_name + 'nodes')
+            root.connect(coupled_name + name[:-1] + '.disp', name + perf_name + 'disp')
+            root.connect(coupled_name + name[:-1] + '.S_ref', name + perf_name + 'S_ref')
+            root.connect(coupled_name + name[:-1] + '.widths', name + perf_name + 'widths')
+            root.connect(coupled_name + name[:-1] + '.chords', name + perf_name + 'chords')
+            root.connect(coupled_name + name[:-1] + '.lengths', name + perf_name + 'lengths')
+            root.connect(coupled_name + name[:-1] + '.cos_sweep', name + perf_name + 'cos_sweep')
+
+            # Connect parameters from the 'coupled' group to the total performance group.
+            root.connect(coupled_name + name[:-1] + '.S_ref', total_perf_name + name + 'S_ref')
+            root.connect(coupled_name + name[:-1] + '.widths', total_perf_name + name + 'widths')
+            root.connect(coupled_name + name[:-1] + '.chords', total_perf_name + name + 'chords')
+            root.connect(coupled_name + name[:-1] + '.b_pts', total_perf_name + name + 'b_pts')
+            root.connect(name + 'perf.cg_location', total_perf_name + name + 'cg_location')
+
+            # Connection performance functional variables
+            root.connect(name + perf_name + 'structural_weight', total_perf_name + name + 'structural_weight')
+            root.connect(name + perf_name + 'L', total_perf_name + name + 'L')
+            root.connect(name + perf_name + 'CL', total_perf_name + name + 'CL')
+            root.connect(name + perf_name + 'CD', total_perf_name + name + 'CD')
+            root.connect(coupled_name + 'aero_states.' + name + 'sec_forces', total_perf_name + name + 'sec_forces')
+
+        # Set solver properties for the coupled group
+        coupled.ln_solver = ScipyGMRES()
+        coupled.ln_solver.preconditioner = LinearGaussSeidel()
+        coupled.aero_states.ln_solver = LinearGaussSeidel()
+        coupled.nl_solver = NLGaussSeidel()
+
+        # This is only available in the most recent version of OpenMDAO.
+        # It may help converge tightly coupled systems when using NLGS.
+        try:
+            coupled.nl_solver.options['use_aitken'] = True
+            coupled.nl_solver.options['aitken_alpha_min'] = 0.01
+            # coupled.nl_solver.options['aitken_alpha_max'] = 0.5
+        except:
+            pass
+
+        if self.prob_dict['print_level'] == 2:
+            coupled.ln_solver.options['iprint'] = 1
+        if self.prob_dict['print_level']:
+            coupled.nl_solver.options['iprint'] = 1
+
+        # Reset g back to the 1g state
+        self.prob_dict['g'] = original_g
+
+        return coupled
+
+    def setup_total_perf_group(self, root, g_factor):
+
+        # Add functionals to evaluate performance of the system.
+        # Note that only the interesting results are promoted here; not all
+        # of the parameters.
+        if g_factor == 1.:
+            root.add('total_perf',
+                     TotalPerformance(self.surfaces, self.prob_dict, g_factor),
+                     promotes=['L_equals_W', 'fuelburn', 'CM', 'CL', 'CD', 'v', 'rho', 'cg', 'weighted_obj', 'total_weight'])
+        else:
+            root.add('total_perf_25g',
+                     TotalPerformance(self.surfaces, self.prob_dict, g_factor),
+                     promotes=['v', 'rho'])
+
+    def setup_aerostruct(self):
+        """
+        Specific method to add the necessary components to the problem for an
+        aerostructural problem.
+
+        Because this code has been extended to work for multiple aerostructural
+        surfaces, a good portion of it is spent doing the bookkeeping for parameter
+        passing and ensuring that each component modifies the correct data.
+        """
+
+        # Set the problem name if the user doesn't
+        if 'prob_name' not in self.prob_dict.keys():
+            self.prob_dict['prob_name'] = 'aerostruct'
+
+        # Create the base root-level group
+        root = Group()
+
+        # Create the problem and assign the root group
+        self.prob = Problem()
+        self.prob.root = root
+
+        # Loop over each surface in the surfaces list
+        for surface in self.surfaces:
+
+            # Get the surface name and create a group to contain components
+            # only for this surface
+            name = surface['name']
+            tmp_group = Group()
+
+            # Strip the surface names from the desvars list and save this
+            # modified list as self.desvars
+            desvar_names = []
+            for desvar in self.desvars.keys():
+
+                # Check to make sure that the surface's name is in the design
+                # variable and only add the desvar to the list if it corresponds
+                # to this surface.
+                if name[:-1] in desvar:
+                    desvar_names.append(''.join(desvar.split('.')[1:]))
+
+            # Add independent variables that do not belong to a specific component
+            indep_vars = []
+            for var in surface['geo_vars']:
+                if var in desvar_names or var in surface['initial_geo'] or 'thickness' in var:
+                    indep_vars.append((var, surface[var]))
+
+            # Add components to include in the surface's group
+            tmp_group.add('indep_vars',
+                     IndepVarComp(indep_vars),
+                     promotes=['*'])
+            tmp_group.add('tube',
+                     MaterialsTube(surface),
+                     promotes=['*'])
+            tmp_group.add('mesh',
+                     GeometryMesh(surface, self.desvars),
+                     promotes=['*'])
+            tmp_group.add('struct_setup',
+                     SpatialBeamSetup(surface),
+                     promotes=['*'])
+
+            # Add bspline components for active bspline geometric variables.
+            # We only add the component if the corresponding variable is a desvar,
+            # a special parameter (radius), or if the user or geometry provided
+            # an initial distribution.
+            for var in surface['bsp_vars']:
+                if var in desvar_names or var in surface['initial_geo'] or 'thickness' in var:
+                    n_pts = surface['num_y']
+                    if var in ['thickness_cp', 'radius_cp']:
+                        n_pts -= 1
+                    trunc_var = var.split('_')[0]
+                    tmp_group.add(trunc_var + '_bsp',
+                             Bspline(var, trunc_var, surface['num_'+var], n_pts, surface['span_cos_spacing']),
+                             promotes=['*'])
+
+            # Add monotonic constraints for selected variables
+            if surface['monotonic_con'] is not None:
+                if type(surface['monotonic_con']) is not list:
+                    surface['monotonic_con'] = [surface['monotonic_con']]
+                for var in surface['monotonic_con']:
+                    tmp_group.add('monotonic_' + var,
+                        MonotonicConstraint(var, surface), promotes=['*'])
+
+            # Add tmp_group to the problem with the name of the surface.
+            name_orig = name
+            name = name[:-1]
+            root.add(name, tmp_group, promotes=[])
+
+        coupled = self.setup_coupled_group(1., name_orig)
+        root.add('coupled', coupled, promotes=['v'])
+
+        coupled_25g = self.setup_coupled_group(self.prob_dict['g_factor'], name_orig)
+        root.add('coupled_25g', coupled_25g, promotes=['v'])
+
+        self.setup_total_perf_group(root, 1.)
+        self.setup_total_perf_group(root, self.prob_dict['g_factor'])
+
+        # Add problem information as an independent variables component
+        prob_vars = [('v', self.prob_dict['v']),
+            ('alpha', self.prob_dict['alpha']),
+            ('alpha_25g', self.prob_dict['alpha']),
+            ('M', self.prob_dict['M']),
+            ('re', self.prob_dict['Re']/self.prob_dict['reynolds_length']),
+            ('rho', self.prob_dict['rho']),
+            ('rho_25g', self.prob_dict['rho_25g']),
+            ]
+
+        root.add('prob_vars',
+                 IndepVarComp(prob_vars),
+                 promotes=['*'])
+
+        root.add('alpha_con',
+            ExecComp('alpha_con = alpha_25g - alpha'),
+            promotes=['*'],
+        )
+
+        # Actually set up the system
+        self.setup_prob()
+
