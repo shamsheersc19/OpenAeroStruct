@@ -2,7 +2,7 @@ from __future__ import division, print_function
 import numpy as np
 import scipy.sparse
 
-def get_bspline_mtx(num_cp, num_pt, order=4):
+def get_bspline_mtx(num_cp, num_pt, order=4, span_cos_spacing=0.):
     """ Create Jacobian to fit a bspline to a set of data.
 
     Parameters
@@ -21,11 +21,25 @@ def get_bspline_mtx(num_cp, num_pt, order=4):
         points vector.
 
     """
-    
+
     knots = np.zeros(num_cp + order)
     knots[order-1:num_cp+1] = np.linspace(0, 1, num_cp - order + 2)
     knots[num_cp+1:] = 1.0
     t_vec = np.linspace(0, 1, num_pt)
+
+    # Create the blended spacing using the user input for span_cos_spacing
+    beta = np.linspace(0, np.pi/2, num_pt)
+
+    # Distribution for cosine spacing
+    cosine = np.cos(beta)
+
+    # Distribution for uniform spacing
+    uniform = np.linspace(0, 1., num_pt)[::-1]
+
+    # Combine the two distrubtions using span_cos_spacing as the weighting factor.
+    # span_cos_spacing == 1. is for fully cosine, 0. for uniform
+    t_vec = cosine * span_cos_spacing + (1 - span_cos_spacing) * uniform
+    t_vec = 1 - t_vec
 
     basis = np.zeros(order)
     arange = np.arange(order)

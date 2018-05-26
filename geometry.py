@@ -884,11 +884,12 @@ class Bspline(Component):
         Number of outputted interpolated b-spline points.
     """
 
-    def __init__(self, cpname, ptname, n_input, n_output):
+    def __init__(self, cpname, ptname, n_input, n_output, span_cos_spacing):
         super(Bspline, self).__init__()
         self.cpname = cpname
         self.ptname = ptname
-        self.jac = get_bspline_mtx(n_input, n_output, order=min(n_input, 4))
+        self.span_cos_spacing = span_cos_spacing
+        self.jac = get_bspline_mtx(n_input, n_output, order=min(n_input, 4), span_cos_spacing=span_cos_spacing)
         self.add_param(cpname, val=np.zeros(n_input))
         self.add_output(ptname, val=np.zeros(n_output))
 

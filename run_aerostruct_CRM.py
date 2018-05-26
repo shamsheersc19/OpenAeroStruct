@@ -28,6 +28,8 @@ if __name__ == "__main__":
     # these are different MDA solver options, see run_classes.py for more.
     solver_options = ['gs_wo_aitken', 'gs_w_aitken', 'newton_gmres', 'newton_direct']
     solver_atol = 1e-6
+    
+    g_factor = 2.5
 
     # Set problem type
     prob_dict = {'type' : 'aerostruct',
@@ -36,9 +38,11 @@ if __name__ == "__main__":
                  'optimizer': 'SNOPT',
                  'alpha' : 0., # [degrees] angle of attack (keep at 0)
                  'cg' : np.array([30., 0., 5.]),
-                 'solver_combo' : solver_options[0],
+                 'solver_combo' : solver_options[1],
                  'solver_atol' : solver_atol,
-                 'print_level' : 1
+                 'print_level' : 1,
+                 'g_factor' : g_factor,
+                 'rho_25g' : .57,
                  }
                  
     if input_arg.startswith('0'):  # run analysis once
@@ -65,7 +69,7 @@ if __name__ == "__main__":
                  'toverc_cp' : np.array([0.14, 0.14, 0.14, 0.14, 0.14]),
                  'E' : 70.e9,            # [Pa] Young's modulus of the spar
                  'G' : 30.e9,            # [Pa] shear modulus of the spar
-                 'yield' : 324.e6/ 2.5 / 1.5, # [Pa] yield stress divided by 2.5 for limiting case
+                 'yield' : 324.e6/ 2.5 / 1.5 * g_factor, # [Pa] yield stress divided by 2.5 for limiting case
                  'mrho' : 2.8e3,          # [kg/m^3] material density
                  'strength_factor_for_upper_skin' : 1.4, # for the upper skin, the yield stress is multiplied by this factor
                  'sweep' : 0.,
@@ -91,7 +95,9 @@ if __name__ == "__main__":
 
     # Add design variables, constraint, and objective on the problem
     # OAS_prob.add_desvar('alpha', lower=-10., upper=10.)
+    # OAS_prob.add_desvar('alpha_25g', lower=-10., upper=10.)
     OAS_prob.add_constraint('L_equals_W', equals=0.)
+    OAS_prob.add_constraint('total_perf_25g.L_equals_W', equals=0.)
     OAS_prob.add_objective('fuelburn', scaler=1e-5)
     OAS_prob.add_constraint('coupled.wing.S_ref', lower=414.1)
 
@@ -101,6 +107,7 @@ if __name__ == "__main__":
     OAS_prob.add_desvar('wing.skinthickness_cp', lower=0.002, upper=0.1, scaler=1e2)
     OAS_prob.add_desvar('wing.toverc_cp', lower=0.06, upper=0.14, scaler=10.)
     OAS_prob.add_constraint('wing_perf.failure', upper=0.)
+    OAS_prob.add_constraint('wing_perf_25g.failure', upper=0.)
     OAS_prob.add_desvar('wing.span', lower=10., upper=100.)
     OAS_prob.add_desvar('wing.sweep', lower=-60., upper=60.)
     OAS_prob.setup()

@@ -78,6 +78,9 @@ class FunctionalBreguetRange(Component):
         # Convert fuelburn from N to kg
         unknowns['fuelburn'] = fuelburn / self.prob_dict['g']
 
+        if unknowns['fuelburn'].imag == 0:
+            print(unknowns['fuelburn'])
+
         # This lines makes the 'weight' the total aircraft weight
         unknowns['weighted_obj'] = (beta * fuelburn + (1 - beta) * (W0 + Ws + fuelburn)) / self.prob_dict['g']
 
@@ -110,11 +113,12 @@ class FunctionalEquilibrium(Component):
 
     """
 
-    def __init__(self, surfaces, prob_dict):
+    def __init__(self, surfaces, prob_dict, g_factor):
         super(FunctionalEquilibrium, self).__init__()
 
         self.surfaces = surfaces
         self.prob_dict = prob_dict
+        self.g_factor = g_factor
 
         for surface in surfaces:
             name = surface['name']
@@ -139,7 +143,7 @@ class FunctionalEquilibrium(Component):
             structural_weight += params[name+'structural_weight']
             L += params[name+'L']
 
-        tot_weight = structural_weight + params['fuelburn'] * self.prob_dict['g'] + W0
+        tot_weight = (structural_weight + params['fuelburn'] * self.prob_dict['g'] + W0) * self.g_factor
 
         unknowns['total_weight'] = tot_weight
         unknowns['L_equals_W'] = (tot_weight - L) / tot_weight
@@ -154,8 +158,6 @@ class ComputeCG(Component):
 
     Parameters
     ----------
-    nodes[ny, 3] : numpy array
-        Flattened array with coordinates for each FEM node.
     structural_weight : float
         Total weight of the structural spar for a given surface.
     cg_location[3] : numpy array
@@ -182,7 +184,6 @@ class ComputeCG(Component):
         for surface in surfaces:
             name = surface['name']
 
-            self.add_param(name+'nodes', val=0.)
             self.add_param(name+'structural_weight', val=0.)
             self.add_param(name+'cg_location', val=np.zeros((3), dtype=data_type))
 
@@ -494,14 +495,14 @@ class TotalPerformance(Group):
     Group to contain the total aerostructural performance components.
     """
 
-    def __init__(self, surfaces, prob_dict):
+    def __init__(self, surfaces, prob_dict, g_factor):
         super(TotalPerformance, self).__init__()
 
         self.add('fuelburn',
                  FunctionalBreguetRange(surfaces, prob_dict),
                  promotes=['*'])
         self.add('L_equals_W',
-                 FunctionalEquilibrium(surfaces, prob_dict),
+                 FunctionalEquilibrium(surfaces, prob_dict, g_factor),
                  promotes=['*'])
         self.add('CG',
                  ComputeCG(surfaces, prob_dict),

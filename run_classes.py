@@ -23,7 +23,7 @@ import numpy as np
 # OpenMDAO modules
 # =============================================================================
 from openmdao.api import IndepVarComp, Problem, Group, ScipyOptimizer, Newton, ScipyGMRES, LinearGaussSeidel, NLGaussSeidel, SqliteRecorder, profile, CaseReader, DirectSolver
-from openmdao.api import view_model
+from openmdao.api import view_model, ExecComp
 from six import iteritems
 
 # =============================================================================
@@ -898,7 +898,7 @@ class OASProblem(object):
         # Actually set up the problem
         self.setup_prob()
 
-    def setup_aerostruct(self):
+    def old_setup_aerostruct(self):
         """
         Specific method to add the necessary components to the problem for an
         aerostructural problem.
@@ -1318,9 +1318,20 @@ class OASProblem(object):
             root.connect(name[:-1] + '.mesh', coupled_name + name[:-1] + '.mesh')
 
             # Connect performance calculation variables
-            root.connect(name[:-1] + '.radius', name + perf_name + 'radius')
+            # root.connect(name[:-1] + '.radius', name + perf_name + 'radius')
             root.connect(name[:-1] + '.A', name + perf_name + 'A')
-            root.connect(name[:-1] + '.thickness', name + perf_name + 'thickness')
+            root.connect(name[:-1] + '.A_enc', name + perf_name + 'A_enc')
+            # root.connect(name[:-1] + '.Iy', name + perf_name + 'Iy')
+            root.connect(name[:-1] + '.Iz', name + perf_name + 'Iz')
+            root.connect(name[:-1] + '.J', name + perf_name + 'J')
+            root.connect(name[:-1] + '.htop', name + perf_name + 'htop')
+            root.connect(name[:-1] + '.hbottom', name + perf_name + 'hbottom')
+            root.connect(name[:-1] + '.Qz', name + perf_name + 'Qz')
+            root.connect(name[:-1] + '.hfront', name + perf_name + 'hfront')
+            root.connect(name[:-1] + '.hrear', name + perf_name + 'hrear')
+            root.connect(name[:-1] + '.sparthickness', name + perf_name + 'sparthickness')
+            root.connect(name[:-1] + '.skinthickness', name + perf_name + 'skinthickness')
+            root.connect(name[:-1] + '.toverc', name + perf_name + 'toverc')
 
             # Connect parameters from the 'coupled' group to the performance
             # groups for the individual surfaces.
@@ -1346,25 +1357,89 @@ class OASProblem(object):
             root.connect(name + perf_name + 'CD', total_perf_name + name + 'CD')
             root.connect(coupled_name + 'aero_states.' + name + 'sec_forces', total_perf_name + name + 'sec_forces')
 
-        # Set solver properties for the coupled group
-        coupled.ln_solver = ScipyGMRES()
-        coupled.ln_solver.preconditioner = LinearGaussSeidel()
-        coupled.aero_states.ln_solver = LinearGaussSeidel()
-        coupled.nl_solver = NLGaussSeidel()
+        # # Set solver properties for the coupled group
+        # coupled.ln_solver = ScipyGMRES()
+        # coupled.ln_solver.preconditioner = LinearGaussSeidel()
+        # coupled.aero_states.ln_solver = LinearGaussSeidel()
+        # coupled.nl_solver = NLGaussSeidel()
+        # 
+        # # This is only available in the most recent version of OpenMDAO.
+        # # It may help converge tightly coupled systems when using NLGS.
+        # try:
+        #     coupled.nl_solver.options['use_aitken'] = True
+        #     coupled.nl_solver.options['aitken_alpha_min'] = 0.01
+        #     # coupled.nl_solver.options['aitken_alpha_max'] = 0.5
+        # except:
+        #     pass
+        # 
+        # if self.prob_dict['print_level'] == 2:
+        #     coupled.ln_solver.options['iprint'] = 1
+        # if self.prob_dict['print_level']:
+        #     coupled.nl_solver.options['iprint'] = 1
+        
+        solver_combo = self.prob_dict['solver_combo']
 
-        # This is only available in the most recent version of OpenMDAO.
-        # It may help converge tightly coupled systems when using NLGS.
-        try:
+        if solver_combo == 'gs_wo_aitken':
+            coupled.ln_solver = ScipyGMRES()
+            coupled.ln_solver.options['maxiter'] = 200
+            coupled.ln_solver.options['atol'] =1e-12
+            coupled.ln_solver.preconditioner = LinearGaussSeidel()
+            coupled.ln_solver.preconditioner.options['maxiter'] = 1
+            # coupled.aero_states.ln_solver = LinearGaussSeidel()
+            coupled.nl_solver = NLGaussSeidel()
+            coupled.nl_solver.options['maxiter'] = 1000
+        
+        if solver_combo == 'gs_w_aitken':
+            coupled.ln_solver = ScipyGMRES()
+            coupled.ln_solver.options['maxiter'] = 200
+            coupled.ln_solver.options['atol'] =1e-12
+            coupled.ln_solver.preconditioner = LinearGaussSeidel()
+            coupled.ln_solver.preconditioner.options['maxiter'] = 1
+            # coupled.aero_states.ln_solver = LinearGaussSeidel()
+            coupled.nl_solver = NLGaussSeidel()
+            coupled.nl_solver.options['maxiter'] = 1000
             coupled.nl_solver.options['use_aitken'] = True
             coupled.nl_solver.options['aitken_alpha_min'] = 0.01
-            # coupled.nl_solver.options['aitken_alpha_max'] = 0.5
-        except:
-            pass
+            coupled.nl_solver.options['aitken_alpha_max'] = 1.5
+            
+        if solver_combo == 'newton_gmres':
 
-        if self.prob_dict['print_level'] == 2:
-            coupled.ln_solver.options['iprint'] = 1
-        if self.prob_dict['print_level']:
-            coupled.nl_solver.options['iprint'] = 1
+            coupled.ln_solver = ScipyGMRES()
+            coupled.ln_solver.options['maxiter'] = 200
+            coupled.ln_solver.options['atol'] =1e-12
+            coupled.ln_solver.preconditioner = LinearGaussSeidel()
+            coupled.ln_solver.preconditioner.options['maxiter'] = 1
+            # coupled.aero_states.ln_solver = LinearGaussSeidel()
+            coupled.nl_solver = Newton()
+            coupled.nl_solver.options['maxiter'] = 30
+            coupled.nl_solver.options['solve_subsystems'] = True
+            
+            # print(coupled.nl_solver.options['iprint'])
+            # print(coupled.ln_solver.options['iprint'])
+            # print(coupled.ln_solver.preconditioner.options['iprint'])
+            # exit()
+        
+        if solver_combo == 'newton_direct':
+            
+            coupled.ln_solver = DirectSolver()            
+            # coupled.aero_states.ln_solver = LinearGaussSeidel()
+            coupled.nl_solver = Newton()
+            coupled.nl_solver.options['maxiter'] = 10
+            coupled.nl_solver.options['solve_subsystems'] = True
+
+
+        coupled.nl_solver.options['atol'] = self.prob_dict['solver_atol']
+        coupled.nl_solver.options['rtol'] = 1e-100
+        coupled.nl_solver.options['utol'] = 1e-100
+
+
+        # if self.prob_dict['print_level'] == 2:
+        #     coupled.ln_solver.options['iprint'] = 1
+        # if self.prob_dict['print_level']:
+        #     coupled.nl_solver.options['iprint'] = 1
+            
+        coupled.ln_solver.options['iprint'] = self.prob_dict['print_level']
+        coupled.nl_solver.options['iprint'] = self.prob_dict['print_level']
 
         # Reset g back to the 1g state
         self.prob_dict['g'] = original_g
@@ -1452,7 +1527,8 @@ class OASProblem(object):
             for var in surface['bsp_vars']:
                 if var in desvar_names or var in surface['initial_geo'] or 'thickness' in var:
                     n_pts = surface['num_y']
-                    if var in ['thickness_cp', 'radius_cp']:
+                    # if var in ['thickness_cp', 'radius_cp']:
+                    if var in ['sparthickness_cp', 'skinthickness_cp', 'toverc_cp']:
                         n_pts -= 1
                     trunc_var = var.split('_')[0]
                     tmp_group.add(trunc_var + '_bsp',

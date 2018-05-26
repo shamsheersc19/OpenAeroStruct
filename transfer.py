@@ -209,5 +209,12 @@ class TransferLoads(Component):
         loads[ 1:, :3] += 0.5 * sec_forces_sum[:, :]
         loads[:-1, 3:] += 0.5 * moment
         loads[ 1:, 3:] += 0.5 * moment
+        
+        # print(loads)
+        
+        loads[:,2] *= 0.6
+        
+        # print(loads)
 
         unknowns['loads'] = loads
+        # print(unknowns['loads'])

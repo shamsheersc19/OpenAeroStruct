@@ -177,6 +177,7 @@ class Display(object):
                 # Structural only
                 elif 'disp_aug' in key and 'coupled' not in key:
                     names.append(key.split('.')[0])
+            names = ['coupled.wing']
 
             self.names = names
             n_names = len(names)
