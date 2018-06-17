@@ -15,6 +15,9 @@ except:
 
 from openmdao.api import Component
 
+def norm(vec):
+    return np.sqrt(np.sum(vec**2))
+
 class TransferDisplacements(Component):
     """
     Perform displacement transfer.
@@ -45,8 +48,6 @@ class TransferDisplacements(Component):
 
         self.ny = surface['num_y']
         self.nx = surface['num_x']
-        # self.fem_origin = surface['fem_origin']
-        # self.fem_origin = (surface['data_x_upper'][0] + surface['data_x_upper'][-1]) / 2.
         self.fem_origin = (surface['data_x_upper'][0] *(surface['data_y_upper'][0]-surface['data_y_lower'][0]) + \
         surface['data_x_upper'][-1]*(surface['data_y_upper'][-1]-surface['data_y_lower'][-1])) / \
         ( (surface['data_y_upper'][0]-surface['data_y_lower'][0]) + (surface['data_y_upper'][-1]-surface['data_y_lower'][-1]))
@@ -56,19 +57,14 @@ class TransferDisplacements(Component):
         self.add_output('def_mesh', val=np.zeros((self.nx, self.ny, 3), dtype=data_type))
 
         if not fortran_flag:
-            self.deriv_options['type'] = 'cs'
+            self.deriv_options['type'] = 'fd'
 
     def solve_nonlinear(self, params, unknowns, resids):
         mesh = params['mesh']
         disp = params['disp']
 
         # Get the location of the spar within the wing and save as w
-        # w = self.surface['fem_origin']
-        # w = (self.surface['data_x_upper'][0] + self.surface['data_x_upper'][-1]) / 2.
-        surface = self.surface
-        w = (surface['data_x_upper'][0] *(surface['data_y_upper'][0]-surface['data_y_lower'][0]) + \
-        surface['data_x_upper'][-1]*(surface['data_y_upper'][-1]-surface['data_y_lower'][-1])) / \
-        ( (surface['data_y_upper'][0]-surface['data_y_lower'][0]) + (surface['data_y_upper'][-1]-surface['data_y_lower'][-1]))
+        w = self.fem_origin
 
         # Run Fortran if possible
         if fortran_flag:
@@ -100,7 +96,7 @@ class TransferDisplacements(Component):
                 T[ :2,  :2] += [[cos(rz), -sin(rz)], [ sin(rz), cos(rz)]]
 
                 # Obtain the displacements on the mesh based on the spar response
-                mesh_disp[:, ind, :] += Smesh[:, ind, :].dot(T)
+                mesh_disp[:, ind, :] += np.dot(T, Smesh[:, ind, :].T).T
                 mesh_disp[:, ind, 0] += dx
                 mesh_disp[:, ind, 1] += dy
                 mesh_disp[:, ind, 2] += dz
@@ -153,15 +149,15 @@ class TransferLoads(Component):
         computed from the sectional forces.
     """
 
-    def __init__(self, surface):
+    def __init__(self, surface, prob_dict, g_factor):
         super(TransferLoads, self).__init__()
 
         self.surface = surface
+        self.prob_dict = prob_dict
+        self.g_factor = g_factor
 
         self.ny = surface['num_y']
         self.nx = surface['num_x']
-        # self.fem_origin = surface['fem_origin']
-        # self.fem_origin = (surface['data_x_upper'][0] + surface['data_x_upper'][-1]) / 2.
         self.fem_origin = (surface['data_x_upper'][0] *(surface['data_y_upper'][0]-surface['data_y_lower'][0]) + \
         surface['data_x_upper'][-1]*(surface['data_y_upper'][-1]-surface['data_y_lower'][-1])) / \
         ( (surface['data_y_upper'][0]-surface['data_y_lower'][0]) + (surface['data_y_upper'][-1]-surface['data_y_lower'][-1]))
@@ -169,12 +165,19 @@ class TransferLoads(Component):
         self.add_param('def_mesh', val=np.zeros((self.nx, self.ny, 3), dtype=complex))
         self.add_param('sec_forces', val=np.zeros((self.nx-1, self.ny-1, 3),
                        dtype=complex))
+        self.add_param('chords_fem', val=np.ones((self.ny - 1), dtype = complex))
+        self.add_param('fuelburn', val=1.)
+        self.add_param('A', val=np.zeros((self.ny - 1), dtype=complex))
+        self.add_param('A_int', val=np.zeros((self.ny - 1), dtype=complex))
         self.add_output('loads', val=np.zeros((self.ny, 6),
                         dtype=complex))
+        self.add_output('fuel_vol_delta', val=1.)
 
         self.deriv_options['type'] = 'cs'
         self.deriv_options['check_type'] = 'fd'
         self.deriv_options['check_form'] = 'central'
+        
+        self.element_lengths = np.ones(self.ny - 1, complex)
 
     def solve_nonlinear(self, params, unknowns, resids):
         mesh = params['def_mesh']
@@ -210,4 +213,52 @@ class TransferLoads(Component):
         loads[:-1, 3:] += 0.5 * moment
         loads[ 1:, 3:] += 0.5 * moment
 
+        #=======================================================================
+        # For fuel and structural weight
+        #=======================================================================
+        
+        # First try fuel weight
+        fuel_weight = (params['fuelburn']/2. + self.prob_dict['Wf_reserve']/2.) * 9.81 * self.g_factor
+        
+        # First we need element lengths
+        nodes = (1-w) * mesh[0, :, :] + w * mesh[-1, :, :]
+        for i in range(self.ny - 1):
+            self.element_lengths[i] = norm(nodes[i+1] - nodes[i])
+        
+        # And we also need the deltas between consecutive nodes
+        deltas = nodes[1:, :] - nodes[:-1, :]
+
+        # Next we also need wingbox section widths (this is from greometry.py)
+        chords_fem = params['chords_fem']
+                
+        # Next we multiply the element lengths with the A_encs for the volumes
+        vols = self.element_lengths * params['A_int']
+        
+        sum_vols = np.sum(vols)
+        
+        # Now we need the fuel weight per section
+        # Assume it's divided evenly based on area
+        z_weights = vols * fuel_weight / sum_vols
+        
+        # Adding wing structural weights
+        struct_weights = self.element_lengths * params['A'] * self.surface['mrho'] * 9.81 * self.g_factor * self.prob_dict['W_wing_factor']
+        z_weights += struct_weights
+        
+        # Assume weight coincides with the elastic axis
+        # This should be very reasonable becuse the elastic axis is also expected to be somewhere in the middle of the secitons
+        z_forces_for_each = z_weights / 2.
+        z_moments_for_each = z_weights * self.element_lengths / 12. * (deltas[:, 0]**2 + deltas[:,1]**2)**0.5 / self.element_lengths
+        
+        # loads normal to the elements (vertical direction)
+        loads[:-1, 2] += -z_forces_for_each
+        loads[1:, 2] += -z_forces_for_each
+        
+        # bending moments for consistency
+        loads[:-1, 3] += -z_moments_for_each * deltas[: , 1] / self.element_lengths
+        loads[1:, 3] += z_moments_for_each * deltas[: , 1] / self.element_lengths
+        
+        loads[:-1, 4] += -z_moments_for_each * deltas[: , 0] / self.element_lengths
+        loads[1:, 4] += z_moments_for_each * deltas[: , 0] / self.element_lengths
+        
         unknowns['loads'] = loads
+        unknowns['fuel_vol_delta'] = sum_vols - (params['fuelburn']/2. + self.prob_dict['Wf_reserve']/2.) / 803

@@ -3,7 +3,7 @@ import numpy as np
 
 from openmdao.api import Component
 
-def wingbox_props(chord, sparthickness, skinthickness, data_x_upper, data_x_lower, data_y_upper, data_y_lower, t_over_c_original, t_over_c, twist=0.):
+def wingbox_props(chord, sparthickness, skinthickness, data_x_upper, data_x_lower, data_y_upper, data_y_lower, t_over_c_original, t_over_c, streamwise_chord, twist=0.):
     
     # Scale data points with chord 
     data_x_upper = chord * data_x_upper
@@ -11,20 +11,26 @@ def wingbox_props(chord, sparthickness, skinthickness, data_x_upper, data_x_lowe
     data_x_lower = chord * data_x_lower
     data_y_lower = chord * data_y_lower
     
-    # Scale y-coordinates by t/c design variable
-    data_y_upper *= t_over_c / t_over_c_original
-    data_y_lower *= t_over_c / t_over_c_original
+    # Scale y-coordinates by t/c design variable which is streamwise t/c
+    data_y_upper *= t_over_c / t_over_c_original * streamwise_chord / chord
+    data_y_lower *= t_over_c / t_over_c_original * streamwise_chord / chord
     
     # Compute enclosed area for torsion constant
     # This currently does not change with twist
+    # Also compute internal area for internal volume calculation for fuel
     A_enc = 0
+    A_int = 0
     for i in range(data_x_upper.size-1):
         
         A_enc += (data_x_upper[i+1] - data_x_upper[i]) * (data_y_upper[i+1] + data_y_upper[i] - skinthickness ) / 2 # area above 0 line
         A_enc += (data_x_lower[i+1] - data_x_lower[i]) * (-data_y_lower[i+1] - data_y_lower[i] - skinthickness ) / 2 # area below 0 line
-
+        A_int += (data_x_upper[i+1] - data_x_upper[i]) * (data_y_upper[i+1] + data_y_upper[i] - 2*skinthickness ) / 2 # area above 0 line
+        A_int += (data_x_lower[i+1] - data_x_lower[i]) * (-data_y_lower[i+1] - data_y_lower[i] - 2*skinthickness ) / 2 # area below 0 line
+    
     A_enc -= (data_y_upper[0] - data_y_lower[0]) * sparthickness / 2 # area of spars
     A_enc -= (data_y_upper[-1] - data_y_lower[-1]) * sparthickness / 2 # area of spars
+    A_int -= (data_y_upper[0] - data_y_lower[0]) * sparthickness # area of spars
+    A_int -= (data_y_upper[-1] - data_y_lower[-1]) * sparthickness # area of spars
 
     # Compute perimeter to thickness ratio for torsion constant
     # This currently does not change with twist
@@ -144,7 +150,7 @@ def wingbox_props(chord, sparthickness, skinthickness, data_x_upper, data_x_lowe
     hfront =  centroid_Ivert - data_x_upper[0]
     hrear = data_x_upper[-1] - centroid_Ivert
     
-    return I_horiz, I_vert, Q_upper, J, area, A_enc, htop, hbottom, hfront, hrear
+    return I_horiz, I_vert, Q_upper, J, area, A_enc, htop, hbottom, hfront, hrear, A_int
 
 class MaterialsTube(Component):
     """
@@ -188,8 +194,8 @@ class MaterialsTube(Component):
 
         # self.add_param('radius', val=np.ones((self.ny - 1)))
         self.add_param('chords_fem', val=np.ones((self.ny - 1), dtype = complex))
+        self.add_param('streamwise_chords', val=np.ones((self.ny - 1), dtype = complex))
         self.add_param('twist_fem', val=np.ones((self.ny - 1),  dtype = complex))
-        # self.add_param('thickness', val=np.ones((self.ny - 1), dtype = complex))
         
         self.add_param('sparthickness', val=np.ones((self.ny - 1), dtype = complex))
         self.add_param('skinthickness', val=np.ones((self.ny - 1),  dtype = complex))
@@ -197,6 +203,7 @@ class MaterialsTube(Component):
         
         self.add_output('A', val=np.ones((self.ny - 1),  dtype = complex))
         self.add_output('A_enc', val=np.ones((self.ny - 1),  dtype = complex))
+        self.add_output('A_int', val=np.ones((self.ny - 1),  dtype = complex))
         self.add_output('Iy', val=np.ones((self.ny - 1),  dtype = complex))
         self.add_output('Qz', val=np.ones((self.ny - 1),  dtype = complex))
         self.add_output('Iz', val=np.ones((self.ny - 1),  dtype = complex))
@@ -217,6 +224,6 @@ class MaterialsTube(Component):
         for i in range(self.ny - 1):
             
             unknowns['Iz'][i], unknowns['Iy'][i], unknowns['Qz'][i], unknowns['J'][i], unknowns['A'][i], unknowns['A_enc'][i],\
-            unknowns['htop'][i], unknowns['hbottom'][i], unknowns['hfront'][i], unknowns['hrear'][i]  = \
+            unknowns['htop'][i], unknowns['hbottom'][i], unknowns['hfront'][i], unknowns['hrear'][i], unknowns['A_int'][i]  = \
             wingbox_props(params['chords_fem'][i], params['sparthickness'][i], params['skinthickness'][i], self.data_x_upper, \
-            self.data_x_lower, self.data_y_upper, self.data_y_lower, self.t_over_c, params['toverc'][i], -params['twist_fem'][i])
+            self.data_x_lower, self.data_y_upper, self.data_y_lower, self.t_over_c, params['toverc'][i], params['streamwise_chords'][i], -params['twist_fem'][i])

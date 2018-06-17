@@ -61,6 +61,7 @@ class FunctionalBreguetRange(Component):
         R = self.prob_dict['R']
         M = self.prob_dict['M']
         W0 = self.prob_dict['W0'] * self.prob_dict['g']
+        Wf_reserve = self.prob_dict['Wf_reserve'] * self.prob_dict['g']
 
         beta = self.prob_dict['beta']
 
@@ -69,11 +70,11 @@ class FunctionalBreguetRange(Component):
         Ws = 0.
         for surface in self.surfaces:
             name = surface['name']
-            Ws += params[name+'structural_weight']
+            Ws += params[name+'structural_weight'] * self.prob_dict['W_wing_factor']
 
         CL = params['CL']
         CD = params['CD']
-        fuelburn = np.sum((W0 + Ws) * (np.exp(R * CT / a / M * CD / CL) - 1))
+        fuelburn = np.sum((W0 + Ws + Wf_reserve) * (np.exp(R * CT / a / M * CD / CL) - 1))
 
         # Convert fuelburn from N to kg
         unknowns['fuelburn'] = fuelburn / self.prob_dict['g']
@@ -82,7 +83,7 @@ class FunctionalBreguetRange(Component):
             print(unknowns['fuelburn'])
 
         # This lines makes the 'weight' the total aircraft weight
-        unknowns['weighted_obj'] = (beta * fuelburn + (1 - beta) * (W0 + Ws + fuelburn)) / self.prob_dict['g']
+        unknowns['weighted_obj'] = (beta * fuelburn + (1 - beta) * (W0 + Ws + fuelburn + Wf_reserve)) / self.prob_dict['g']
 
         # Whereas this line only considers the structural weight
         # unknowns['weighted_obj'] = (beta * fuelburn + (1 - beta) * Ws) / self.prob_dict['g']
@@ -138,12 +139,13 @@ class FunctionalEquilibrium(Component):
         structural_weight = 0.
         L = 0.
         W0 = self.prob_dict['W0'] * self.prob_dict['g']
+        Wf_reserve = self.prob_dict['Wf_reserve'] * self.prob_dict['g']
         for surface in self.surfaces:
             name = surface['name']
-            structural_weight += params[name+'structural_weight']
+            structural_weight += params[name+'structural_weight'] * self.prob_dict['W_wing_factor']
             L += params[name+'L']
 
-        tot_weight = (structural_weight + params['fuelburn'] * self.prob_dict['g'] + W0) * self.g_factor
+        tot_weight = (structural_weight + params['fuelburn'] * self.prob_dict['g'] + W0 + Wf_reserve) * self.g_factor
 
         unknowns['total_weight'] = tot_weight
         unknowns['L_equals_W'] = (tot_weight - L) / tot_weight
@@ -198,15 +200,15 @@ class ComputeCG(Component):
 
     def solve_nonlinear(self, params, unknowns, resids):
         g = self.prob_dict['g']
-        W0 = self.prob_dict['W0']
+        W0 = self.prob_dict['W0'] + self.prob_dict['Wf_reserve']
         W0_cg = W0 * self.prob_dict['cg'] * g
 
         spar_cg = 0.
         structural_weight = 0.
         for surface in self.surfaces:
             name = surface['name']
-            spar_cg = params[name + 'cg_location'] * params[name + 'structural_weight']
-            structural_weight += params[name + 'structural_weight']
+            spar_cg = params[name + 'cg_location'] * params[name + 'structural_weight'] * self.prob_dict['W_wing_factor']
+            structural_weight += params[name + 'structural_weight'] * self.prob_dict['W_wing_factor']
         tot_weight = structural_weight + params['fuelburn'] * g + W0
 
         unknowns['cg'] = (W0_cg + spar_cg) / (params['total_weight'] - params['fuelburn'] * g)
@@ -500,7 +502,7 @@ class TotalPerformance(Group):
 
         self.add('fuelburn',
                  FunctionalBreguetRange(surfaces, prob_dict),
-                 promotes=['*'])
+                 promotes=['weighted_obj', 'CL', 'CD'])
         self.add('L_equals_W',
                  FunctionalEquilibrium(surfaces, prob_dict, g_factor),
                  promotes=['*'])

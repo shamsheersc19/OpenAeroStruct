@@ -424,6 +424,7 @@ class GeometryMesh(Component):
         # compute it here.
 
         self.add_output('chords_fem', val=np.ones((ny - 1)))
+        self.add_output('streamwise_chords', val=np.ones((ny - 1)))
         self.add_output('twist_fem', val=np.ones((ny - 1)))
 
         self.symmetry = surface['symmetry']
@@ -461,6 +462,7 @@ class GeometryMesh(Component):
         rotate(mesh, self.geo_params['twist'], self.symmetry, self.rotate_x)
 
         ch_fem = chords_fem(mesh)
+        unknowns['streamwise_chords'] = ch_fem
         twist_fem = ch_fem.copy()
         
         surface = self.surface

@@ -49,6 +49,10 @@ except:
     print("Correct plotting modules not available; please consult import list")
     print()
 
+my_blue = '#4C72B0'
+my_orange = '#ff9933'
+my_green = '#56A968'
+
 #####################
 # User-set parameters
 #####################
@@ -66,7 +70,7 @@ class Display(object):
         self.root = Tk.Tk()
         self.root.wm_title("Viewer")
 
-        self.f = plt.figure(dpi=100, figsize=(12, 6), facecolor='white')
+        self.f = plt.figure(dpi=100, figsize=(12, 8), facecolor='white')
         self.canvas = FigureCanvasTkAgg(self.f, master=self.root)
         self.canvas.get_tk_widget().pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
 
@@ -109,23 +113,32 @@ class Display(object):
         self.twist = []
         self.mesh = []
         self.def_mesh = []
+        self.def_mesh_maneuver = []
         self.radius = []
         self.sparthickness = []
         self.skinthickness = []
         self.toverc = []
         sec_forces = []
+        sec_forces_maneuver = []
         normals = []
+        normals_maneuver = []
         widths = []
+        widths_maneuver = []
         self.lift = []
         self.lift_ell = []
+        self.lift_maneuver = []
+        self.lift_ell_maneuver = []
         self.vonmises = []
         alpha = []
+        alpha_maneuver = []
         rho = []
+        rho_maneuver = []
         v = []
         self.CL = []
         self.AR = []
         self.S_ref = []
         self.obj = []
+        self.struct_weights = []
         self.cg = []
 
         meta_db = sqlitedict.SqliteDict(self.db_name, 'metadata')
@@ -161,6 +174,7 @@ class Display(object):
 
             if self.opt:
                 self.obj.append(case_data['Unknowns'][self.obj_key])
+                self.struct_weights.append(case_data['Unknowns']['coupled_maneuver.wing_perf_maneuver.structural_weight'])
 
             names = []
             for key in case_data['Unknowns'].keys():
@@ -231,13 +245,21 @@ class Display(object):
                     self.sparthickness.append(case_data['Unknowns'][short_name+'.sparthickness'])
                     self.skinthickness.append(case_data['Unknowns'][short_name+'.skinthickness'])
                     self.toverc.append(case_data['Unknowns'][short_name+'.toverc'])
+                    # self.vonmises.append(
+                        # np.max(case_data['Unknowns'][short_name+'_perf.vonmises'], axis=1))
                     self.vonmises.append(
-                        np.max(case_data['Unknowns'][short_name+'_perf.vonmises'], axis=1))
+                        np.max(case_data['Unknowns']['coupled_maneuver.wing_perf_maneuver.vonmises'], axis=1)) # HARD CODED PL FIX
                     self.def_mesh.append(case_data['Unknowns'][name+'.def_mesh'])
+                    self.def_mesh_maneuver.append(case_data['Unknowns']['coupled_maneuver.wing.def_mesh'])
                     normals.append(case_data['Unknowns'][name+'.normals'])
+                    normals_maneuver.append(case_data['Unknowns']['coupled_maneuver.wing.normals'])
                     widths.append(case_data['Unknowns'][name+'.widths'])
+                    widths_maneuver.append(case_data['Unknowns']['coupled_maneuver.wing.widths'])
                     sec_forces.append(case_data['Unknowns']['coupled.aero_states.' + short_name + '_sec_forces'])
-                    self.CL.append(case_data['Unknowns'][short_name+'_perf.CL1'])
+                    sec_forces_maneuver.append(case_data['Unknowns']['coupled_maneuver.aero_states.' + short_name + '_sec_forces'])
+                    
+                    # self.CL.append(case_data['Unknowns'][short_name+'_perf.CL1'])
+                    self.CL.append(case_data['Unknowns']['coupled.wing_perf.CL1']) #HARDCODED PL FIX
                     self.S_ref.append(case_data['Unknowns'][name+'.S_ref'])
 
                     # Not the best solution for now, but this will ensure
@@ -254,7 +276,9 @@ class Display(object):
 
             if self.show_wing:
                 alpha.append(case_data['Unknowns']['alpha'] * np.pi / 180.)
+                alpha_maneuver.append(case_data['Unknowns']['alpha_maneuver'] * np.pi / 180.)
                 rho.append(case_data['Unknowns']['rho'])
+                rho_maneuver.append(case_data['Unknowns']['rho_maneuver'])
                 v.append(case_data['Unknowns']['v'])
                 self.cg.append(case_data['Unknowns']['cg'])
 
@@ -284,9 +308,13 @@ class Display(object):
             if self.show_wing:
                 new_twist = []
                 new_sec_forces = []
+                new_sec_forces_maneuver = []
                 new_def_mesh = []
+                new_def_mesh_maneuver = []
                 new_widths = []
+                new_widths_maneuver = []
                 new_normals = []
+                new_normals_maneuver = []
 
             for i in range(self.num_iters + 1):
                 for j, name in enumerate(names):
@@ -320,8 +348,22 @@ class Display(object):
                         mirror_forces = sec_forces[i*n_names+j].copy()
                         mirror_forces = mirror_forces[:, ::-1, :]
                         new_sec_forces.append(np.hstack((sec_forces[i*n_names+j], mirror_forces)))
+                        
+                        mirror_mesh_maneuver = self.def_mesh_maneuver[i*n_names+j].copy()
+                        mirror_mesh_maneuver[:, :, 1] *= -1.
+                        mirror_mesh_maneuver = mirror_mesh_maneuver[:, ::-1, :][:, 1:, :]
+                        new_def_mesh_maneuver.append(np.hstack((self.def_mesh_maneuver[i*n_names+j], mirror_mesh_maneuver)))
+
+                        mirror_normals_maneuver = normals_maneuver[i*n_names+j].copy()
+                        mirror_normals_maneuver = mirror_normals_maneuver[:, ::-1, :][:, 1:, :]
+                        new_normals_maneuver.append(np.hstack((normals_maneuver[i*n_names+j], mirror_normals_maneuver)))
+
+                        mirror_forces_maneuver = sec_forces_maneuver[i*n_names+j].copy()
+                        mirror_forces_maneuver = mirror_forces_maneuver[:, ::-1, :]
+                        new_sec_forces_maneuver.append(np.hstack((sec_forces_maneuver[i*n_names+j], mirror_forces_maneuver)))
 
                         new_widths.append(np.hstack((widths[i*n_names+j], widths[i*n_names+j][::-1])))
+                        new_widths_maneuver.append(np.hstack((widths_maneuver[i*n_names+j], widths_maneuver[i*n_names+j][::-1])))
                         twist = self.twist[i*n_names+j]
                         new_twist.append(np.hstack((twist, twist[::-1][1:])))
 
@@ -336,8 +378,10 @@ class Display(object):
                 self.def_mesh = new_def_mesh
                 self.twist = new_twist
                 widths = new_widths
+                widths_maneuver = new_widths_maneuver
                 normals = new_normals
                 sec_forces = new_sec_forces
+                sec_forces_maneuver = new_sec_forces_maneuver
 
         if self.show_wing:
             for i in range(self.num_iters + 1):
@@ -354,6 +398,14 @@ class Display(object):
 
                     lift = (-forces[:, 0] * sina + forces[:, 2] * cosa) / \
                         widths[i*n_names+j]/0.5/rho[i]/v[i]**2
+                    
+                    a_maneuver = alpha_maneuver[i]
+                    cosa_maneuver = np.cos(a_maneuver)
+                    sina_maneuver = np.sin(a_maneuver)
+                    forces_maneuver = np.sum(sec_forces_maneuver[i*n_names+j], axis=0)
+
+                    lift_maneuver= (-forces_maneuver[:, 0] * sina_maneuver + forces_maneuver[:, 2] * cosa_maneuver) / \
+                        widths_maneuver[i*n_names+j]/0.5/rho_maneuver[i]/v[i]**2
 
                     span = (m_vals[0, :, 1] / (m_vals[0, -1, 1] - m_vals[0, 0, 1]))
                     span = span - (span[0] + .5)
@@ -361,9 +413,23 @@ class Display(object):
                     lift_area = np.sum(lift * (span[1:] - span[:-1]))
 
                     lift_ell = 4 * lift_area / np.pi * np.sqrt(1 - (2*span)**2)
+                    
+                    normalize_factor = max(lift_ell)
+                    lift_ell = lift_ell / normalize_factor
+                    lift = lift / normalize_factor
+                    
+                    lift_area_maneuver = np.sum(lift_maneuver * (span[1:] - span[:-1]))
+
+                    lift_ell_maneuver = 4 * lift_area_maneuver / np.pi * np.sqrt(1 - (2*span)**2)
+                    
+                    normalize_factor = max(lift_ell_maneuver)
+                    lift_ell_maneuver = lift_ell_maneuver / normalize_factor
+                    lift_maneuver = lift_maneuver / normalize_factor
 
                     self.lift.append(lift)
                     self.lift_ell.append(lift_ell)
+                    self.lift_maneuver.append(lift_maneuver)
+                    self.lift_ell_maneuver.append(lift_ell_maneuver)
 
                     wingspan = np.abs(m_vals[0, -1, 1] - m_vals[0, 0, 1])
                     self.AR.append(wingspan**2 / self.S_ref[i*n_names+j])
@@ -392,7 +458,9 @@ class Display(object):
             self.max_twist += diff
             self.min_l, self.max_l = self.get_list_limits(self.lift)
             self.min_le, self.max_le = self.get_list_limits(self.lift_ell)
-            self.min_l, self.max_l = min(self.min_l, self.min_le), max(self.max_l, self.max_le)
+            self.min_l_maneuver, self.max_l_maneuver = self.get_list_limits(self.lift_maneuver)
+            self.min_le_maneuver, self.max_le_maneuver = self.get_list_limits(self.lift_ell_maneuver)
+            self.min_l, self.max_l = min(self.min_l, self.min_le, self.min_l_maneuver, self.min_le_maneuver), max(self.max_l, self.max_le, self.max_l_maneuver, self.max_le_maneuver)
             diff = (self.max_l - self.min_l) * 0.05
             self.min_l -= diff
             self.max_l += diff
@@ -419,13 +487,29 @@ class Display(object):
             self.ax2.set_ylabel('twist [deg]', rotation="horizontal", ha="right")
 
             self.ax3.cla()
-            self.ax3.text(0.05, 0.8, 'elliptical',
-                transform=self.ax3.transAxes, color='g')
+            # self.ax3.text(0.55, 0.1, 'elliptical',
+            #     transform=self.ax3.transAxes, color='k')
+            # self.ax3.text(0.55, 0.25, 'cruise',
+            #     transform=self.ax3.transAxes, color=my_blue)
+            # self.ax3.text(0.55, 0.4, '2.5 g',
+            #     transform=self.ax3.transAxes, color=my_orange)
+            self.ax3.text(0.01, 0.1+.4, 'elliptical',
+                transform=self.ax3.transAxes, color='k')
+            # self.ax3.text(0.45, 0.1+.4, 'elliptical',
+            #     transform=self.ax3.transAxes, color='k')
+            # self.ax3.text(0.01, 0.25+.4, 'cruise',
+            #     transform=self.ax3.transAxes, color=my_blue)
+            # self.ax3.text(0.01, 0.4+.4, '2.5 g',
+            #     transform=self.ax3.transAxes, color=my_orange)
+            self.ax3.text(0.7, 0.25+.45, 'cruise',
+                transform=self.ax3.transAxes, color=my_blue)
+            self.ax3.text(0.7, 0.4+.45, '2.5 g',
+                transform=self.ax3.transAxes, color=my_orange)
             self.ax3.locator_params(axis='y',nbins=4)
             self.ax3.locator_params(axis='x',nbins=3)
             self.ax3.set_ylim([self.min_l, self.max_l])
             self.ax3.set_xlim([-1, 1])
-            self.ax3.set_ylabel('lift', rotation="horizontal", ha="right")
+            self.ax3.set_ylabel('normalized lift', rotation="horizontal", ha="right")
 
         if self.show_tube:
 
@@ -448,14 +532,18 @@ class Display(object):
             for key, yield_stress in iteritems(self.yield_stress_dict):
                 self.ax5.axhline(yield_stress, c='r', lw=2, ls='--')
                 max_yield_stress = max(max_yield_stress, yield_stress)
+                
+            self.ax5.axhline(420*1e6/1.5, c='r', lw=2, ls='--')
+            max_yield_stress = max(max_yield_stress, 420/1.5)
 
             self.ax5.locator_params(axis='y',nbins=4)
             self.ax5.locator_params(axis='x',nbins=3)
-            self.ax5.set_ylim([self.min_vm, self.max_vm])
-            self.ax5.set_ylim([0, max_yield_stress*1.1])
+            # self.ax5.set_ylim([self.min_vm, self.max_vm])
+            # self.ax5.set_ylim([0, max_yield_stress*1.1])
             self.ax5.set_xlim([-1, 1])
             self.ax5.set_ylabel('von Mises [Pa]', rotation="horizontal", ha="right")
-            self.ax5.text(0.075, 1.1, 'failure limit',
+            self.ax5.set_xlabel('normalized span')
+            self.ax5.text(0.15, 1.05, 'failure limit',
                 transform=self.ax5.transAxes, color='r')
 
         n_names = len(self.names)
@@ -468,11 +556,15 @@ class Display(object):
             if self.show_wing:
                 t_vals = self.twist[self.curr_pos*n_names+j]
                 l_vals = self.lift[self.curr_pos*n_names+j]
+                l_maneuver_vals = self.lift_maneuver[self.curr_pos*n_names+j]
                 le_vals = self.lift_ell[self.curr_pos*n_names+j]
+                le_vals_maneuver = self.lift_ell_maneuver[self.curr_pos*n_names+j]
 
-                self.ax2.plot(rel_span, t_vals, lw=2, c='b')
-                self.ax3.plot(rel_span, le_vals, '--', lw=2, c='g')
-                self.ax3.plot(span_diff, l_vals, lw=2, c='b')
+                self.ax2.plot(rel_span, t_vals, lw=2, c='k')
+                self.ax3.plot(rel_span, le_vals, '--', lw=2, c='k', alpha = 0.8)
+                self.ax3.plot(span_diff, l_vals, lw=2, c=my_blue)
+                self.ax3.plot(span_diff, l_maneuver_vals, lw=2, c=my_orange)
+                # self.ax3.plot(rel_span, le_vals_maneuver, '--', lw=2, c='k')
 
             if self.show_tube:
                 skinthick = self.skinthickness[self.curr_pos*n_names+j]
@@ -480,22 +572,35 @@ class Display(object):
                 toverc = self.toverc[self.curr_pos*n_names+j]
                 vm_vals = self.vonmises[self.curr_pos*n_names+j]
 
-                self.ax4.plot(span_diff, skinthick, lw=2, c='b')
+                self.ax4.plot(span_diff, skinthick, lw=2, c=my_blue)
                 self.ax4.text(0.05, 0.8, 'skin',
-                    transform=self.ax4.transAxes, color='b')
-                self.ax4.plot(span_diff, sparthick, lw=2, c='g')
+                    transform=self.ax4.transAxes, color=my_blue)
+                self.ax4.plot(span_diff, sparthick, lw=2, c=my_green)
                 self.ax4.text(0.05, 0.6, 'spar',
-                    transform=self.ax4.transAxes, color='g')
-                self.ax5.plot(span_diff, vm_vals, lw=2, c='b')
+                    transform=self.ax4.transAxes, color=my_green)
+                self.ax5.plot(span_diff, vm_vals, lw=2, c='k')
                 self.ax6.plot(span_diff, toverc, lw=2, c='k')
+                
+                # self.ax2.xaxis.set_visible(False)
+                # self.ax3.xaxis.set_visible(False)
+                # self.ax4.xaxis.set_visible(False)
+                # self.ax6.xaxis.set_visible(False)
+                
+                self.ax2.set_xticklabels([])
+                self.ax3.set_xticklabels([])
+                self.ax4.set_xticklabels([])
+                self.ax6.set_xticklabels([])
 
     def plot_wing(self):
 
         n_names = len(self.names)
         self.ax.cla()
-        az = self.ax.azim
-        el = self.ax.elev
-        dist = self.ax.dist
+        # az = self.ax.azim
+        # el = self.ax.elev
+        # dist = self.ax.dist
+        az = 270
+        el = 90.
+        dist = 15.
         
         try:
             # for wingbox viz
@@ -665,13 +770,17 @@ class Display(object):
                 lim = ma
         lim /= float(zoom_scale)
         self.ax.auto_scale_xyz([-lim, lim], [-lim, lim], [-lim, lim])
-        self.ax.set_title("Major Iteration: {}".format(self.curr_pos))
+        # self.ax.set_title("Major Iteration: {}".format(self.curr_pos))
 
         round_to_n = lambda x, n: round(x, -int(np.floor(np.log10(abs(x)))) + (n - 1))
         if self.opt:
             obj_val = round_to_n(self.obj[self.curr_pos], 7)
-            self.ax.text2D(.55, .05, self.obj_key + ' [kg]: {}'.format(obj_val),
+            sw_val = round_to_n(self.struct_weights[self.curr_pos]/9.81, 7)
+            self.ax.text2D(.05, -.1, self.obj_key + ' [kg]: {}'.format(obj_val),
                 transform=self.ax.transAxes, color='k')
+            self.ax.text2D(.05, -.15, 'structural weight' + ' [kg]: {}'.format(sw_val),
+                transform=self.ax.transAxes, color='k')
+                
 
         self.ax.view_init(elev=el, azim=az)  # Reproduce view
         self.ax.dist = dist
