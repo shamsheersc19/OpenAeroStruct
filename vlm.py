@@ -1577,15 +1577,14 @@ class ViscousDrag(Component):
             unknowns['CDv'] = self.D_over_q / S_ref
             
             # Wave drag estimate
-
-            t_over_c_weighted = np.sum(t_over_c * chords) / np.sum(chords) # weighted average of t/c
-            # avg_cos_sweep = np.mean(cos_sweep)
-            avg_cos_sweep = np.sum(cos_sweep * chords) / np.sum(chords) # weighted average of 1/4 chord sweep
-            MDD = 0.95 / avg_cos_sweep - t_over_c_weighted / avg_cos_sweep**2 - params['CL'] / (10*avg_cos_sweep**3)
-            Mcrit = MDD - (0.1 / 80.)**(1./3.)
-            if M > Mcrit:
-                CDwave = 20*(M - Mcrit)**4
-                unknowns['CDv'] += CDwave
+            if self.surface['wave_drag']:
+                t_over_c_weighted = np.sum(t_over_c * chords) / np.sum(chords) # weighted average of t/c
+                avg_cos_sweep = np.sum(cos_sweep * chords) / np.sum(chords) # weighted average of 1/4 chord sweep
+                MDD = 0.95 / avg_cos_sweep - t_over_c_weighted / avg_cos_sweep**2 - params['CL'] / (10*avg_cos_sweep**3)
+                Mcrit = MDD - (0.1 / 80.)**(1./3.)
+                if M > Mcrit:
+                    CDwave = 20*(M - Mcrit)**4
+                    unknowns['CDv'] += CDwave
 
             if self.surface['symmetry']:
                 unknowns['CDv'] *= 2

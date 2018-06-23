@@ -595,12 +595,14 @@ class Display(object):
 
         n_names = len(self.names)
         self.ax.cla()
-        # az = self.ax.azim
-        # el = self.ax.elev
-        # dist = self.ax.dist
-        az = 270
-        el = 90.
-        dist = 15.
+        az = self.ax.azim
+        el = self.ax.elev
+        dist = self.ax.dist
+
+        # for a planform view use:
+        # az = 270
+        # el = 90.
+        # dist = 15.
         
         try:
             # for wingbox viz

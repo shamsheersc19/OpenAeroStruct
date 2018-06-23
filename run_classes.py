@@ -289,6 +289,7 @@ class OASProblem(object):
                     'data_y_lower' : np.array([-0.0585, -0.0606, -0.0633, -0.0647, -0.0666, -0.068,  -0.0687, 
                                                 -0.0692, -0.0696, -0.0696, -0.0692, -0.0688, -0.0676, -0.0657, -0.0644, -0.0614, 
                                                 -0.0588, -0.0543, -0.0509, -0.0451, -0.041], dtype = 'complex128'),
+                    'wave_drag' : True
                     }
         return defaults
 
@@ -503,8 +504,8 @@ class OASProblem(object):
             if self.prob_dict['optimizer'] == 'SNOPT':
                 print("POS SNOPT")
                 self.prob.driver.options['optimizer'] = "SNOPT"
-                self.prob.driver.opt_settings = {'Major optimality tolerance': 1e-6,
-                                                 'Major feasibility tolerance': 1e-6,
+                self.prob.driver.opt_settings = {'Major optimality tolerance': 5e-6,
+                                                 'Major feasibility tolerance': 1e-8,
                                                  'Major iterations limit':400,
                                                  'Minor iterations limit':2000,
                                                  'Iterations limit':1000

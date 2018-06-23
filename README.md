@@ -1,11 +1,9 @@
-[![Build Status](https://travis-ci.org/mdolab/OpenAeroStruct.svg?branch=master)](https://travis-ci.org/mdolab/OpenAeroStruct)
-[![Coverage Status](https://coveralls.io/repos/github/mdolab/OpenAeroStruct/badge.svg?branch=master)](https://coveralls.io/github/mdolab/OpenAeroStruct?branch=master)
-[![Documentation Status](https://readthedocs.org/projects/openaerostruct/badge/?version=latest)](http://openaerostruct.readthedocs.io/en/latest/?badge=latest)
 # OpenAeroStruct
 
 OpenAeroStruct is a lightweight Python tool that performs aerostructural optimization of lifting surfaces using OpenMDAO. It uses a vortex lattice method (VLM) for the aerodynamics analysis and a spatial beam model with 6-DOF per element for the structural analysis.
+This is a modified version that uses effective section properties of a wingbox.
 
-Documentation is available [here](http://openaerostruct.readthedocs.io/en/latest/).
+Documentation or the original version is available [here](http://openaerostruct.readthedocs.io/en/latest/).
 
 Please see the [SMO journal paper](https://link.springer.com/article/10.1007%2Fs00158-018-1912-8) for more information and please cite this article if you use OpenAeroStruct in your research. Here's an open-access copy of the paper: http://rdcu.be/Gtl1
 
@@ -13,7 +11,7 @@ Please see the [SMO journal paper](https://link.springer.com/article/10.1007%2Fs
 
 ## Installation
 
-To use OpenAeroStruct, you must first install OpenMDAO 1.7.3 by following the instructions here: https://github.com/openmdao/openmdao. If you are unfamiliar with OpenMDAO and wish to modify the internals of OpenAeroStruct, you should examine the OpenMDAO documentation at http://openmdao.readthedocs.io/en/1.7.3/. The tutorials provided with OpenMDAO, especially the Sellar Problem, are helpful to understand the basics of using OpenMDAO to solve an optimization problem. Note that OpenMDAO 1.7.3 is the most recent version that has been tested and confirmed working with OpenAeroStruct.
+To use OpenAeroStruct, you must first install OpenMDAO 1.7.4 by following the instructions here: https://github.com/openmdao/openmdao1. If you are unfamiliar with OpenMDAO and wish to modify the internals of OpenAeroStruct, you should examine the OpenMDAO documentation at http://openmdao.readthedocs.io/en/1.7.3/. The tutorials provided with OpenMDAO, especially the Sellar Problem, are helpful to understand the basics of using OpenMDAO to solve an optimization problem. Note that OpenMDAO 1.7.3 is the most recent version that has been tested and confirmed working with OpenAeroStruct.
 
 Next, clone this repository:
 

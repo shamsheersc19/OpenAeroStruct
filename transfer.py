@@ -218,7 +218,7 @@ class TransferLoads(Component):
         #=======================================================================
         
         # First try fuel weight
-        fuel_weight = (params['fuelburn']/2. + self.prob_dict['Wf_reserve']/2.) * 9.81 * self.g_factor
+        fuel_weight = (params['fuelburn']/2. + self.prob_dict['Wf_reserve']/2.) * self.prob_dict['g'] * self.g_factor
         
         # First we need element lengths
         nodes = (1-w) * mesh[0, :, :] + w * mesh[-1, :, :]
@@ -241,7 +241,7 @@ class TransferLoads(Component):
         z_weights = vols * fuel_weight / sum_vols
         
         # Adding wing structural weights
-        struct_weights = self.element_lengths * params['A'] * self.surface['mrho'] * 9.81 * self.g_factor * self.prob_dict['W_wing_factor']
+        struct_weights = self.element_lengths * params['A'] * self.surface['mrho'] * self.prob_dict['g'] * self.g_factor * self.prob_dict['W_wing_factor']
         z_weights += struct_weights
         
         # Assume weight coincides with the elastic axis
