@@ -3,7 +3,7 @@
 OpenAeroStruct is a Python tool that performs aerostructural optimization of lifting surfaces using OpenMDAO. It uses a vortex lattice method (VLM) for the aerodynamics and a finite element method (FEM) spatial beam model with 6-DOF-per-node elements for the structures.
 This repository contains a modified version of OpenAeroStruct that uses effective section properties of a wingbox.
 
-See the [conference paper](http://mdolab.engin.umich.edu/sites/default/files/EngOpt_preprint.pdf) for more on the wingbox model.
+See the [conference paper](http://mdolab.engin.umich.edu/sites/default/files/EngOpt_preprint_0.pdf) for more on the wingbox model.
 
 Documentation of the original [version](https://github.com/mdolab/OpenAeroStruct) is available [here](http://openaerostruct.readthedocs.io/en/latest/).
 We recommend gaining familiarity with OpenAeroStruct using the standard [version](https://github.com/mdolab/OpenAeroStruct) first.
