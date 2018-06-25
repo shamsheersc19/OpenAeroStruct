@@ -350,7 +350,7 @@ class OASProblem(object):
 
             else:
                 Error('wing_type option not understood. Must be either a type of ' +
-                      '"CRM" or "rect".')
+                      '"CRM", "uCRM_based", or "rect".')
 
             # Chop the mesh in half if using symmetry during analysis.
             # Note that this means that the provided mesh should be the full mesh

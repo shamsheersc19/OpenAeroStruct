@@ -7,7 +7,7 @@ For the results in the EngOpt conference paper, the following were used:
 Call as e.g. `python run_aerostruct_2.py 0 5 51 1 CRM` to run a single analysis, or
 call as e.g. `python run_aerostruct_2.py 1 5 51 1 CRM` to perform optimization.
 The first argument is for analysis (0) or optimization (1).
-The second argument is for the number of chordwise nodes for the VLM mesh.
+The second argument is for the number (odd) of chordwise nodes for the VLM mesh.
 The third argument is for the number (odd) of total spanwise nodes (both halves of the wing)
 The fourth argument is 1 to use the Korn wave drag estimate and 0 to not.
 The fifth argument is the wing type ('CRM', 'uCRM_based', 'rect').
@@ -97,8 +97,8 @@ if __name__ == "__main__":
     OAS_prob = OASProblem(prob_dict)
  
  
-    surf_dict = {'num_y' : int(input_arg_ny),        # number of spanwise nodes for complete wing
-                 'num_x' : int(input_arg_nx),        # number of chordwise nodes
+    surf_dict = {'num_y' : int(input_arg_ny),        # number of spanwise nodes for complete wing (specify odd numbers)
+                 'num_x' : int(input_arg_nx),        # number of chordwise nodes (specify odd numbers)
                  'exact_failure_constraint' : False, # Exact or KS failure constraint
                  'wing_type' : input_arg_wing_type,  # using OAS's wings defined in geometry.py
                  'span_cos_spacing' : 0,             # uniform spacing if 0
