@@ -28,7 +28,6 @@ Note that the code will run without compiling the Fortran library, but it will r
 
 `run_aerostruct_comp_CRM.py` contains an example script for aerostructural analysis and optimization with the wingbox model.
 It also contains instructions on how to run it.
-The other example scripts may not work since they may not have been modified yet to run with this modified code.
 We also recommend gaining familiarity with OpenAeroStruct using the standard [version](https://github.com/mdolab/OpenAeroStruct) first.
 
 For each case, you can view the optimization results using `plot_all.py`.
