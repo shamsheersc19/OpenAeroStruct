@@ -1,11 +1,12 @@
 """ Example runscript to perform aerostructural optimization using CRM geometry.
 
+Call as e.g. `python run_aerostruct_2.py 0 5 51 1 CRM` to run a single analysis, or
+call as e.g. `python run_aerostruct_2.py 1 5 51 1 CRM` to perform optimization.
+
 For the results in the EngOpt conference paper, the following were used:
 `python run_aerostruct_2.py 1 7 51 0 uCRM_based` and
 `python run_aerostruct_2.py 1 7 51 1 uCRM_based`
 
-Call as e.g. `python run_aerostruct_2.py 0 5 51 1 CRM` to run a single analysis, or
-call as e.g. `python run_aerostruct_2.py 1 5 51 1 CRM` to perform optimization.
 The first argument is for analysis (0) or optimization (1).
 The second argument is for the number (odd) of chordwise nodes for the VLM mesh.
 The third argument is for the number (odd) of total spanwise nodes (both halves of the wing)
@@ -37,12 +38,12 @@ if __name__ == "__main__":
     # We use the 10% to 60% portion of a NASA SC2-0612 airfoil for this case
     # The first and last x-coordinates of the upper and lower skins must be the same
  
-    upper_x = np.array([0.1 ,0.11   ,0.12   ,0.13   ,0.14   ,0.15   ,0.16   ,0.17   ,0.18   ,0.19   ,0.2    ,0.21   ,0.22   ,0.23   ,0.24   ,0.25   ,0.26   ,0.27   ,0.28   ,0.29   ,0.3    ,0.31   ,0.32   ,0.33   ,0.34   ,0.35   ,0.36   ,0.37   ,0.38   ,0.39   ,0.4    ,0.41   ,0.42   ,0.43   ,0.44   ,0.45   ,0.46   ,0.47   ,0.48   ,0.49   ,0.5    ,0.51   ,0.52   ,0.53   ,0.54   ,0.55   ,0.56   ,0.57   ,0.58   ,0.59   ,0.6], dtype = 'complex128')
-    lower_x = np.array([ 0.1    ,0.11   ,0.12   ,0.13   ,0.14   ,0.15   ,0.16   ,0.17   ,0.18   ,0.19   ,0.2    ,0.21   ,0.22   ,0.23   ,0.24   ,0.25   ,0.26   ,0.27   ,0.28   ,0.29   ,0.3    ,0.31   ,0.32   ,0.33   ,0.34   ,0.35   ,0.36   ,0.37   ,0.38   ,0.39   ,0.4    ,0.41   ,0.42   ,0.43   ,0.44   ,0.45   ,0.46   ,0.47   ,0.48   ,0.49   ,0.5    ,0.51   ,0.52   ,0.53   ,0.54   ,0.55   ,0.56   ,0.57   ,0.58   ,0.59   ,0.6], dtype = 'complex128')
-    upper_y = np.array([  0.0447    ,0.046  ,0.0472 ,0.0484 ,0.0495 ,0.0505 ,0.0514 ,0.0523 ,0.0531 ,0.0538 ,0.0545 ,0.0551 ,0.0557 ,0.0563 ,0.0568 ,0.0573 ,0.0577 ,0.0581 ,0.0585 ,0.0588 ,0.0591 ,0.0593 ,0.0595 ,0.0597 ,0.0599 ,0.06   ,0.0601 ,0.0602 ,0.0602 ,0.0602 ,0.0602 ,0.0602 ,0.0601 ,0.06   ,0.0599 ,0.0598 ,0.0596 ,0.0594 ,0.0592 ,0.0589 ,0.0586 ,0.0583 ,0.058  ,0.0576 ,0.0572 ,0.0568 ,0.0563 ,0.0558 ,0.0553 ,0.0547 ,0.0541 ], dtype = 'complex128')
-    lower_y = np.array([-0.0447 ,-0.046 ,-0.0473    ,-0.0485    ,-0.0496    ,-0.0506    ,-0.0515    ,-0.0524    ,-0.0532    ,-0.054 ,-0.0547    ,-0.0554    ,-0.056 ,-0.0565    ,-0.057 ,-0.0575    ,-0.0579    ,-0.0583    ,-0.0586    ,-0.0589    ,-0.0592    ,-0.0594    ,-0.0595    ,-0.0596    ,-0.0597    ,-0.0598    ,-0.0598    ,-0.0598    ,-0.0598    ,-0.0597    ,-0.0596    ,-0.0594    ,-0.0592    ,-0.0589    ,-0.0586    ,-0.0582    ,-0.0578    ,-0.0573    ,-0.0567    ,-0.0561    ,-0.0554    ,-0.0546    ,-0.0538    ,-0.0529    ,-0.0519    ,-0.0509    ,-0.0497    ,-0.0485    ,-0.0472    ,-0.0458    ,-0.0444], dtype = 'complex128')
+    upper_x = np.array([0.1, 0.11, 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, 0.18, 0.19, 0.2, 0.21, 0.22, 0.23, 0.24, 0.25, 0.26, 0.27, 0.28, 0.29, 0.3, 0.31, 0.32, 0.33, 0.34, 0.35, 0.36, 0.37, 0.38, 0.39, 0.4, 0.41, 0.42, 0.43, 0.44, 0.45, 0.46, 0.47, 0.48, 0.49, 0.5, 0.51, 0.52, 0.53, 0.54, 0.55, 0.56, 0.57, 0.58, 0.59, 0.6], dtype = 'complex128')
+    lower_x = np.array([0.1, 0.11, 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, 0.18, 0.19, 0.2, 0.21, 0.22, 0.23, 0.24, 0.25, 0.26, 0.27, 0.28, 0.29, 0.3, 0.31, 0.32, 0.33, 0.34, 0.35, 0.36, 0.37, 0.38, 0.39, 0.4, 0.41, 0.42, 0.43, 0.44, 0.45, 0.46, 0.47, 0.48, 0.49, 0.5, 0.51, 0.52, 0.53, 0.54, 0.55, 0.56, 0.57, 0.58, 0.59, 0.6], dtype = 'complex128')
+    upper_y = np.array([ 0.0447,  0.046,  0.0472,  0.0484,  0.0495,  0.0505,  0.0514,  0.0523,  0.0531,  0.0538, 0.0545,  0.0551,  0.0557, 0.0563,  0.0568, 0.0573,  0.0577,  0.0581,  0.0585,  0.0588,  0.0591,  0.0593,  0.0595,  0.0597,  0.0599,  0.06,    0.0601,  0.0602,  0.0602,  0.0602,  0.0602,  0.0602,  0.0601,  0.06,    0.0599,  0.0598,  0.0596,  0.0594,  0.0592,  0.0589,  0.0586,  0.0583,  0.058,   0.0576,  0.0572,  0.0568,  0.0563,  0.0558,  0.0553,  0.0547,  0.0541], dtype = 'complex128')
+    lower_y = np.array([-0.0447, -0.046, -0.0473, -0.0485, -0.0496, -0.0506, -0.0515, -0.0524, -0.0532, -0.054, -0.0547, -0.0554, -0.056, -0.0565, -0.057, -0.0575, -0.0579, -0.0583, -0.0586, -0.0589, -0.0592, -0.0594, -0.0595, -0.0596, -0.0597, -0.0598, -0.0598, -0.0598, -0.0598, -0.0597, -0.0596, -0.0594, -0.0592, -0.0589, -0.0586, -0.0582, -0.0578, -0.0573, -0.0567, -0.0561, -0.0554, -0.0546, -0.0538, -0.0529, -0.0519, -0.0509, -0.0497, -0.0485, -0.0472, -0.0458, -0.0444], dtype = 'complex128')
  
-    # these are the input arguments specified when you call the script
+    # These are the input arguments specified when you call the script
     input_arg_1 = sys.argv[1]
     input_arg_nx = sys.argv[2]
     input_arg_ny = sys.argv[3]
@@ -50,6 +51,7 @@ if __name__ == "__main__":
     input_arg_wing_type = sys.argv[5]
  
     # These are a list of different MDA solver options, see run_classes.py for more. Compatible with OpenMDAO version 1.7.4.
+    # If using OpenMDAO 1.7.3, the `gs_w_aitken` option will not work. Version 1.7.4 is recommended.
     solver_options = ['gs_wo_aitken', 'gs_w_aitken', 'newton_gmres', 'newton_direct']
  
     # Specify a convergence tolerance for the coupled aerostructural solver
@@ -77,12 +79,12 @@ if __name__ == "__main__":
  
                  # Aircraft properties
                  'CT' : 0.53/3600,         # [1/s] specific fuel consumption
-                 'R' : 14.307e6,           # [m] Range
+                 'R' : 14.307e6,           # [m] range
                  'cg' : np.zeros((3)),     # center of gravity for the entire aircraft. Used in trim and stability calculations (not used in this example case).
-                 'W0' : (143000 - 2.5*11600 + 34000), # [kg] Weight without fuel and wing structure. 143000 is ~ empty W of 777-200, 11600 is 1/2 wing structural weight guess, 34000 for payload
-                 'Wf_reserve' : 15000.,    # [kg] reserves fuel
+                 'W0' : (143000 - 2.5*11600 + 34000), # [kg] weight without fuel and wing structure. 143000 is ~ empty W of 777-200, 11600 is 1/2 wing structural weight guess, 34000 for payload
+                 'Wf_reserve' : 15000.,    # [kg] reserve fuel
                  'W_wing_factor' : 1.25,   # factor to account for extra wing structural weight
-                 'beta' : 1.,              # weighting factor for mixed objective (see functionals.py)
+                 'beta' : 1.,              # weighting factor for mixed objective (see functionals.py, the mixed objective is not used for this case)
                  'g_factor' : g_factor,    # load factor for maneuver cases
                  'rho_maneuver' : 0.9237,  # density that gives the required dynamic pressure for the maneuver case using the cruise speed
                  }
@@ -99,7 +101,7 @@ if __name__ == "__main__":
  
     surf_dict = {'num_y' : int(input_arg_ny),        # number of spanwise nodes for complete wing (specify odd numbers)
                  'num_x' : int(input_arg_nx),        # number of chordwise nodes (specify odd numbers)
-                 'exact_failure_constraint' : False, # Exact or KS failure constraint
+                 'exact_failure_constraint' : False, # exact or KS failure constraint
                  'wing_type' : input_arg_wing_type,  # using OAS's wings defined in geometry.py
                  'span_cos_spacing' : 0,             # uniform spacing if 0
                  'chord_cos_spacing' : 0,            # uniform spacing if 0
@@ -153,12 +155,12 @@ if __name__ == "__main__":
 
     # A few other possibilites for constraints and design variables...
     # OAS_prob.add_desvar('wing.span', lower=10., upper=100., scaler=2e-2)
-    # OAS_prob.add_desvar('wing.sweep', lower=-60., upper=60.)
+    # OAS_prob.add_desvar('wing.sweep', lower=-60., upper=60., scaler=1e-1)
     # OAS_prob.add_constraint('coupled.wing.S_ref', lower=414., scaler=2e-3)
     # OAS_prob.add_desvar('alpha', lower=-10., upper=10.)
     # OAS_prob.add_objective('coupled_maneuver.total_perf_maneuver.fuelburn.fuelburn', scaler=1e-5)
     # OAS_prob.add_constraint('wing.twist_cp', lower=np.array([-1e99,-1e99,-1e99,-1e99,-1e99,5]), upper=np.array([1e99,1e99,1e99,1e99,1e99,5]))
-    # OAS_prob.add_desvar('wing.chord_cp', lower=0.25, upper=15., scaler=5.)
+    # OAS_prob.add_desvar('wing.chord_cp', lower=0.25, upper=15.)
     # OAS_prob.add_constraint('coupled.wing_perf.failure', upper=0.)
 
     OAS_prob.setup()
