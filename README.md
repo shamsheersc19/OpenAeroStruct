@@ -1,12 +1,14 @@
 # OpenAeroStruct + wingbox
 
-OpenAeroStruct is a lightweight Python tool that performs aerostructural optimization of lifting surfaces using OpenMDAO. It uses a vortex lattice method (VLM) for the aerodynamics and a spatial beam model with 6-DOF per element for the structures.
-This is a modified version that uses effective section properties of a wingbox.
+OpenAeroStruct is a Python tool that performs aerostructural optimization of lifting surfaces using OpenMDAO. It uses a vortex lattice method (VLM) for the aerodynamics and a finite element method (FEM) spatial beam model with 6-DOF-per-node elements for the structures.
+This repository contains a modified version of OpenAeroStruct that uses effective section properties of a wingbox.
 
 See the [conference paper](http://mdolab.engin.umich.edu/sites/default/files/EngOpt_preprint.pdf) for more on the wingbox model.
 
 Documentation of the original [version](https://github.com/mdolab/OpenAeroStruct) is available [here](http://openaerostruct.readthedocs.io/en/latest/).
-Please see the [SMO journal paper](https://link.springer.com/article/10.1007%2Fs00158-018-1912-8) for more information and please cite this article, along with the conference paper linked above, if you use OpenAeroStruct in your research. Here's an open-access read-only copy of the journal paper: http://rdcu.be/Gtl1
+We recommend gaining familiarity with OpenAeroStruct using the standard [version](https://github.com/mdolab/OpenAeroStruct) first.
+
+Please see the [SMO journal paper](https://link.springer.com/article/10.1007%2Fs00158-018-1912-8) for more information and please cite this article, along with the conference paper linked above, if you use this version of OpenAeroStruct in your research. Here's an open-access read-only copy of the journal paper: http://rdcu.be/Gtl1
 
 ![Optimized CRM-type wing example](/example.png?raw=true "Example Optimization Result and Visualization")
 
@@ -26,9 +28,8 @@ Note that the code will run without compiling the Fortran library, but it will r
 
 ## Usage
 
-`run_aerostruct_comp_CRM.py` contains an example script for aerostructural analysis and optimization with the wingbox model.
+`run_aerostruct_comp_CRM.py` contains an example script for aerostructural analysis and optimization using the wingbox model.
 It also contains instructions on how to run it.
-We also recommend gaining familiarity with OpenAeroStruct using the standard [version](https://github.com/mdolab/OpenAeroStruct) first.
 
 For each case, you can view the optimization results using `plot_all.py`.
 
