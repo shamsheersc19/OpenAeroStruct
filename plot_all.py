@@ -414,7 +414,7 @@ class Display(object):
 
                     lift_ell = 4 * lift_area / np.pi * np.sqrt(1 - (2*span)**2)
                     
-                    normalize_factor = max(lift_ell)
+                    normalize_factor = max(lift_ell) / 4 * np.pi
                     lift_ell = lift_ell / normalize_factor
                     lift = lift / normalize_factor
                     
@@ -422,7 +422,7 @@ class Display(object):
 
                     lift_ell_maneuver = 4 * lift_area_maneuver / np.pi * np.sqrt(1 - (2*span)**2)
                     
-                    normalize_factor = max(lift_ell_maneuver)
+                    normalize_factor = max(lift_ell_maneuver) / 4 * np.pi
                     lift_ell_maneuver = lift_ell_maneuver / normalize_factor
                     lift_maneuver = lift_maneuver / normalize_factor
 
