@@ -6,9 +6,9 @@ This repository contains a modified version of OpenAeroStruct that uses effectiv
 See the [conference paper](http://mdolab.engin.umich.edu/sites/default/files/EngOpt_preprint_0.pdf) for more on the wingbox model.
 
 Documentation of the original [version](https://github.com/mdolab/OpenAeroStruct) is available [here](http://openaerostruct.readthedocs.io/en/latest/).
-We recommend gaining familiarity with OpenAeroStruct using the standard [version](https://github.com/mdolab/OpenAeroStruct) first.
+We recommend gaining familiarity with OpenAeroStruct using the original [version](https://github.com/mdolab/OpenAeroStruct) first.
 
-Please see the [SMO journal paper](https://link.springer.com/article/10.1007%2Fs00158-018-1912-8) for more information and please cite this article, along with the conference paper linked above, if you use this version of OpenAeroStruct in your research. Here's an open-access read-only copy of the journal paper: http://rdcu.be/Gtl1
+Please see the [SMO journal paper](https://link.springer.com/article/10.1007%2Fs00158-018-1912-8) for more information and please cite it, along with the conference paper linked above, if you use this version of OpenAeroStruct in your research. Here's an open-access read-only copy of the journal paper: http://rdcu.be/Gtl1
 
 ![Optimized CRM-type wing example](/example.png?raw=true "Example Optimization Result and Visualization")
 
@@ -43,3 +43,5 @@ The first command performs aerostructural optimization and the second visualizes
 The keywords used for each file are explained in their respective docstrings at the top of the file.
 
 If you wish to examine the code in more depth, see `run_classes.py` and the methods it calls. These methods interface directly with OpenMDAO.
+
+If using this code, please check regularly for updates and direct any questions to sschau@umich.edu.
