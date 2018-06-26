@@ -1,11 +1,11 @@
-""" Example runscript to perform aerostructural optimization using CRM geometry.
+""" Example runscript to perform aerostructural optimization using the wingbox model and the CRM geometry.
 
-Call as e.g. `python run_aerostruct_2.py 0 5 51 1 CRM` to run a single analysis, or
-call as e.g. `python run_aerostruct_2.py 1 5 51 1 CRM` to perform optimization.
+Call as e.g. `python run_aerostruct_comp_CRM.py 0 3 21 1 CRM` to run a single analysis, or
+call as e.g. `python run_aerostruct_comp_CRM.py 1 3 21 1 CRM` to perform optimization.
 
 For the results in the EngOpt conference paper, the following were used:
-`python run_aerostruct_2.py 1 7 51 0 uCRM_based` and
-`python run_aerostruct_2.py 1 7 51 1 uCRM_based`
+`python run_aerostruct_comp_CRM.py 1 7 51 0 uCRM_based` and
+`python run_aerostruct_comp_CRM.py 1 7 51 1 uCRM_based`
 
 The first argument is for analysis (0) or optimization (1).
 The second argument is for the number (odd) of chordwise nodes for the VLM mesh.
@@ -35,7 +35,8 @@ if __name__ == "__main__":
      
     # Provide coordinates for a portion of an airfoil for the wingbox cross-section as an nparray with dtype=complex (to work with the complex-step approximation for derivatives).
     # These should be for an airfoil with the chord scaled to 1.
-    # We use the 10% to 60% portion of a NASA SC2-0612 airfoil for this case
+    # We use the 10% to 60% portion of the NASA SC2-0612 airfoil for this case
+    # We use the coordinates available from airfoiltools.com. Using such a large number of coordinates is not necessary.
     # The first and last x-coordinates of the upper and lower skins must be the same
  
     upper_x = np.array([0.1, 0.11, 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, 0.18, 0.19, 0.2, 0.21, 0.22, 0.23, 0.24, 0.25, 0.26, 0.27, 0.28, 0.29, 0.3, 0.31, 0.32, 0.33, 0.34, 0.35, 0.36, 0.37, 0.38, 0.39, 0.4, 0.41, 0.42, 0.43, 0.44, 0.45, 0.46, 0.47, 0.48, 0.49, 0.5, 0.51, 0.52, 0.53, 0.54, 0.55, 0.56, 0.57, 0.58, 0.59, 0.6], dtype = 'complex128')
@@ -43,7 +44,7 @@ if __name__ == "__main__":
     upper_y = np.array([ 0.0447,  0.046,  0.0472,  0.0484,  0.0495,  0.0505,  0.0514,  0.0523,  0.0531,  0.0538, 0.0545,  0.0551,  0.0557, 0.0563,  0.0568, 0.0573,  0.0577,  0.0581,  0.0585,  0.0588,  0.0591,  0.0593,  0.0595,  0.0597,  0.0599,  0.06,    0.0601,  0.0602,  0.0602,  0.0602,  0.0602,  0.0602,  0.0601,  0.06,    0.0599,  0.0598,  0.0596,  0.0594,  0.0592,  0.0589,  0.0586,  0.0583,  0.058,   0.0576,  0.0572,  0.0568,  0.0563,  0.0558,  0.0553,  0.0547,  0.0541], dtype = 'complex128')
     lower_y = np.array([-0.0447, -0.046, -0.0473, -0.0485, -0.0496, -0.0506, -0.0515, -0.0524, -0.0532, -0.054, -0.0547, -0.0554, -0.056, -0.0565, -0.057, -0.0575, -0.0579, -0.0583, -0.0586, -0.0589, -0.0592, -0.0594, -0.0595, -0.0596, -0.0597, -0.0598, -0.0598, -0.0598, -0.0598, -0.0597, -0.0596, -0.0594, -0.0592, -0.0589, -0.0586, -0.0582, -0.0578, -0.0573, -0.0567, -0.0561, -0.0554, -0.0546, -0.0538, -0.0529, -0.0519, -0.0509, -0.0497, -0.0485, -0.0472, -0.0458, -0.0444], dtype = 'complex128')
  
-    # These are the input arguments specified when you call the script
+    # These are the input arguments specified by the user when the script is called
     input_arg_1 = sys.argv[1]
     input_arg_nx = sys.argv[2]
     input_arg_ny = sys.argv[3]
@@ -61,13 +62,14 @@ if __name__ == "__main__":
     g_factor = 2.5
  
     # Set problem type
+    # for more defaults and options see `def get_default_prob_dict(self):` in run_classes.py
     prob_dict = {'type' : 'aerostruct',
-                 'with_viscous' : True,
-                 'optimizer': 'SNOPT',     # see `def setup_prob(self)` in run_classes for other options and tolerance settings
-                 'solver_combo' : solver_options[1],
+                 'with_viscous' : True,    # use estimates for viscous drag
+                 'optimizer': 'SNOPT',     # see `def setup_prob(self)` in run_classes.py for other options and tolerance settings
+                 'solver_combo' : solver_options[1], # see solver options above 
                  'solver_atol' : solver_atol,
                  'print_level' : 2,
-                 'compute_static_margin' : False,   # static margin computation not verified, may not work right now
+                 'compute_static_margin' : False,    # static margin computation not verified, may not work right now
                  # Flow/environment properties
                  'alpha' : 0.,             # [degrees] angle of attack for cruise case
                  'reynolds_length' : 1.0,  # characteristic Reynolds length
@@ -98,7 +100,8 @@ if __name__ == "__main__":
     # Instantiate problem and add default surface
     OAS_prob = OASProblem(prob_dict)
  
- 
+    # Provide information for the lifting surface
+    # for more defaults and options see `def get_default_surf_dict(self):` in run_classes.py
     surf_dict = {'num_y' : int(input_arg_ny),        # number of spanwise nodes for complete wing (specify odd numbers)
                  'num_x' : int(input_arg_nx),        # number of chordwise nodes (specify odd numbers)
                  'exact_failure_constraint' : False, # exact or KS failure constraint
@@ -110,7 +113,7 @@ if __name__ == "__main__":
                  'symmetry' : True,                  # True for symmetry
                  'S_ref_type' : 'wetted',            # reference area type ('wetted' or 'projected')
                  'twist_cp' : np.array([4., 5., 8., 8., 8., 9.]), # [deg] inital values for twist distribution 
-                 # The following are two thickness variables that differ from the single thickness variable in the standard OAS.
+                 # The following are two thickness variables that differ from the single thickness variable in the original OAS.
                  'skinthickness_cp' : np.array([0.005, 0.01, 0.015, 0.020, 0.025, 0.026]), # [m]
                  'sparthickness_cp' : np.array([0.004, 0.005, 0.005, 0.008, 0.008, 0.01]), # [m]
                  # Airfoil properties for viscous drag calculation
