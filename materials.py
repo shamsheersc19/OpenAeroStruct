@@ -192,7 +192,6 @@ class MaterialsTube(Component):
         self.data_y_upper = surface['data_y_upper']
         self.data_y_lower = surface['data_y_lower']
 
-        # self.add_param('radius', val=np.ones((self.ny - 1)))
         self.add_param('chords_fem', val=np.ones((self.ny - 1), dtype = complex))
         self.add_param('streamwise_chords', val=np.ones((self.ny - 1), dtype = complex))
         self.add_param('twist_fem', val=np.ones((self.ny - 1),  dtype = complex))
@@ -212,8 +211,6 @@ class MaterialsTube(Component):
         self.add_output('hbottom', val=np.ones((self.ny - 1),  dtype = complex))
         self.add_output('hfront', val=np.ones((self.ny - 1),  dtype = complex))
         self.add_output('hrear', val=np.ones((self.ny - 1),  dtype = complex))
-
-        self.arange = np.arange((self.ny - 1))
         
         self.deriv_options['type'] = 'cs'
         self.deriv_options['check_type'] = 'fd'

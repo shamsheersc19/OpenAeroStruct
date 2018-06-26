@@ -153,7 +153,7 @@ class ComputeNodes(Component):
 
         self.ny = surface['num_y']
         self.nx = surface['num_x']
-        # self.fem_origin = (surface['data_x_upper'][0] + surface['data_x_upper'][-1]) / 2.
+
         self.fem_origin = (surface['data_x_upper'][0] *(surface['data_y_upper'][0]-surface['data_y_lower'][0]) + \
         surface['data_x_upper'][-1]*(surface['data_y_upper'][-1]-surface['data_y_lower'][-1])) / \
         ( (surface['data_y_upper'][0]-surface['data_y_lower'][0]) + (surface['data_y_upper'][-1]-surface['data_y_lower'][-1]))
@@ -674,16 +674,13 @@ class SpatialBeamVonMisesTube(Component):
 
         self.add_param('nodes', val=np.zeros((self.ny, 3),
                        dtype=complex))
-        # self.add_param('radius', val=np.zeros((self.ny - 1),
-        #                dtype=complex))
+
         self.add_param('disp', val=np.zeros((self.ny, 6),
                        dtype=complex))
 
         self.add_output('vonmises', val=np.zeros((self.ny-1, 4),
                         dtype=complex))
                         
-        # self.add_param('A', val=np.zeros((self.ny - 1), dtype=complex))
-        # self.add_param('Iy', val=np.zeros((self.ny - 1), dtype=complex))
         self.add_param('Qz', val=np.zeros((self.ny - 1), dtype=complex))
         self.add_param('Iz', val=np.zeros((self.ny - 1), dtype=complex))
         self.add_param('J', val=np.zeros((self.ny - 1), dtype=complex))
@@ -711,26 +708,20 @@ class SpatialBeamVonMisesTube(Component):
         self.tssf = top_skin_strength_factor = surface['strength_factor_for_upper_skin']
 
     def solve_nonlinear(self, params, unknowns, resids):
-        # radius = params['radius']
+
         disp = params['disp']
         nodes = params['nodes']
         vonmises = unknowns['vonmises']
-        # A = params['A']
         A_enc = params['A_enc']
-        # Iy = params['Iy']
         Qy = params['Qz']
         Iz = params['Iz']
         J = params['J']
-        # print("A is", A, "A_enc is",A_enc,"Iy",Iy,"Iz",Iz, "J", J)
         htop = params['htop']
         hbottom = params['hbottom']
         hfront = params['hfront']
         hrear = params['hrear']
         sparthickness = params['sparthickness']
         skinthickness = params['skinthickness']
-        
-        # print(thickness); exit()
-        # print("htop is", htop, "hbottom", hbottom)
         
         T = self.T
         E = self.E
@@ -897,96 +888,6 @@ class SpatialBeamFailureExact(Component):
     def linearize(self, params, unknowns, resids):
         return {('failure', 'vonmises') : np.eye(((self.ny-1)*2)) / self.sigma}
 
-class SparWithinWing(Component):
-    """
-
-    .. warning::
-        This component has not been extensively tested.
-        It may require additional coding to work as intended.
-
-    Parameters
-    ----------
-    mesh[nx, ny, 3] : numpy array
-        Array defining the nodal points of the lifting surface.
-    radius[ny-1] : numpy array
-        Radius of each element of the FEM spar.
-
-    Returns
-    -------
-    spar_within_wing[ny-1] : numpy array
-        If all the values are negative, each element is within the wing,
-        based on the surface's t_over_c value and the current chord.
-        Set a constraint with
-        `OASProblem.add_constraint('spar_within_wing', upper=0.)`
-    """
-
-    def __init__(self, surface):
-        super(SparWithinWing, self).__init__()
-
-        self.surface = surface
-        self.ny = surface['num_y']
-        self.nx = surface['num_x']
-
-        self.add_param('mesh', val=np.zeros((self.nx, self.ny, 3), dtype=data_type))
-        self.add_param('radius', val=np.zeros((self.ny-1), dtype=data_type))
-        self.add_output('spar_within_wing', val=np.zeros((self.ny-1), dtype=data_type))
-
-        self.deriv_options['type'] = 'fd'
-        self.deriv_options['form'] = 'central'
-
-    def solve_nonlinear(self, params, unknowns, resids):
-        mesh = params['mesh']
-        max_radius = radii(mesh, self.surface['t_over_c'])
-        unknowns['spar_within_wing'] = params['radius'] - max_radius
-
-    def linearize(self, params, unknowns, resids):
-        jac = {}
-        jac['spar_within_wing', 'radius'] = -np.eye(self.ny-1)
-        fd_jac = self.fd_jacobian(params, unknowns, resids,
-                                        fd_params=['mesh'],
-                                        fd_unknowns=['spar_within_wing'],
-                                        fd_states=[])
-        jac.update(fd_jac)
-        return jac
-
-class NonIntersectingThickness(Component):
-    """
-
-    Parameters
-    ----------
-    thickness[ny-1] : numpy array
-        Thickness of each element of the FEM spar.
-    radius[ny-1] : numpy array
-        Radius of each element of the FEM spar.
-
-    Returns
-    -------
-    thickness_intersects[ny-1] : numpy array
-        If all the values are negative, each element does not intersect itself.
-        If a value is positive, then the thickness within the hollow spar
-        intersects itself and presents an impossible design.
-        Add a constraint as
-        `OASProblem.add_constraint('thickness_intersects', upper=0.)`
-    """
-
-    def __init__(self, surface):
-        super(NonIntersectingThickness, self).__init__()
-
-        self.ny = surface['num_y']
-        self.nx = surface['num_x']
-
-        self.add_param('thickness', val=np.zeros((self.ny-1)))
-        self.add_param('radius', val=np.zeros((self.ny-1)))
-        self.add_output('thickness_intersects', val=np.zeros((self.ny-1)))
-
-    def solve_nonlinear(self, params, unknowns, resids):
-        unknowns['thickness_intersects'] = params['thickness'] - params['radius']
-
-    def linearize(self, params, unknowns, resids):
-        jac = {}
-        jac['thickness_intersects', 'thickness'] = np.eye(self.ny-1)
-        jac['thickness_intersects', 'radius'] = -np.eye(self.ny-1)
-        return jac
 
 class SpatialBeamSetup(Group):
     """ Group that sets up the spatial beam components and assembles the
@@ -1038,14 +939,6 @@ class SpatialBeamFunctionals(Group):
         self.add('vonmises',
                  SpatialBeamVonMisesTube(surface),
                  promotes=['*'])
-        # self.add('thicknessconstraint',
-        #          NonIntersectingThickness(surface),
-        #          promotes=['*'])
-        # The following component has not been fully tested so we leave it
-        # commented out for now. Use at own risk.
-        # self.add('sparconstraint',
-        #          SparWithinWing(surface),
-        #          promotes=['*'])
 
         if surface['exact_failure_constraint']:
             self.add('failure',

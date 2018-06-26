@@ -433,7 +433,6 @@ class GeometryMesh(Component):
         # additional rotation matrix to modify the twist direction
         self.rotate_x = True
 
-        # if not fortran_flag:
         self.deriv_options['type'] = 'cs'
         self.deriv_options['check_type'] = 'fd'
         self.deriv_options['check_form'] = 'central'
@@ -442,15 +441,6 @@ class GeometryMesh(Component):
         mesh = self.mesh.copy()
         self.geo_params.update(params)
 
-        # if fortran_flag:
-        #     mesh = OAS_API.oas_api.manipulate_mesh(mesh,
-        #     self.geo_params['taper'], self.geo_params['chord'],
-        #     self.geo_params['sweep'], self.geo_params['xshear'],
-        #     self.geo_params['span'], self.geo_params['yshear'],
-        #     self.geo_params['dihedral'], self.geo_params['zshear'],
-        #     self.geo_params['twist'], self.symmetry, self.rotate_x)
-        # 
-        # else:
         taper(mesh, self.geo_params['taper'], self.symmetry)
         scale_x(mesh, self.geo_params['chord'])
         sweep(mesh, self.geo_params['sweep'], self.symmetry)

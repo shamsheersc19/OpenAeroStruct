@@ -165,7 +165,6 @@ class TransferLoads(Component):
         self.add_param('def_mesh', val=np.zeros((self.nx, self.ny, 3), dtype=complex))
         self.add_param('sec_forces', val=np.zeros((self.nx-1, self.ny-1, 3),
                        dtype=complex))
-        self.add_param('chords_fem', val=np.ones((self.ny - 1), dtype = complex))
         self.add_param('fuelburn', val=1.)
         self.add_param('A', val=np.zeros((self.ny - 1), dtype=complex))
         self.add_param('A_int', val=np.zeros((self.ny - 1), dtype=complex))
@@ -214,10 +213,10 @@ class TransferLoads(Component):
         loads[ 1:, 3:] += 0.5 * moment
 
         #=======================================================================
-        # For fuel and structural weight
+        # For fuel- and structural-weight loads
         #=======================================================================
         
-        # First try fuel weight
+        # Fuel weight
         fuel_weight = (params['fuelburn']/2. + self.prob_dict['Wf_reserve']/2.) * self.prob_dict['g'] * self.g_factor
         
         # First we need element lengths
@@ -227,17 +226,14 @@ class TransferLoads(Component):
         
         # And we also need the deltas between consecutive nodes
         deltas = nodes[1:, :] - nodes[:-1, :]
-
-        # Next we also need wingbox section widths (this is from greometry.py)
-        chords_fem = params['chords_fem']
                 
-        # Next we multiply the element lengths with the A_encs for the volumes
+        # Next we multiply the element lengths with the A_int for the internal volumes of the wingobox segments
         vols = self.element_lengths * params['A_int']
         
         sum_vols = np.sum(vols)
         
-        # Now we need the fuel weight per section
-        # Assume it's divided evenly based on area
+        # Now we need the fuel weight per segment
+        # Assume it's divided evenly based on vols
         z_weights = vols * fuel_weight / sum_vols
         
         # Adding wing structural weights
@@ -245,15 +241,14 @@ class TransferLoads(Component):
         z_weights += struct_weights
         
         # Assume weight coincides with the elastic axis
-        # This should be very reasonable becuse the elastic axis is also expected to be somewhere in the middle of the secitons
         z_forces_for_each = z_weights / 2.
         z_moments_for_each = z_weights * self.element_lengths / 12. * (deltas[:, 0]**2 + deltas[:,1]**2)**0.5 / self.element_lengths
         
-        # loads normal to the elements (vertical direction)
+        # Loads in z-direction
         loads[:-1, 2] += -z_forces_for_each
         loads[1:, 2] += -z_forces_for_each
         
-        # bending moments for consistency
+        # Bending moments for consistency
         loads[:-1, 3] += -z_moments_for_each * deltas[: , 1] / self.element_lengths
         loads[1:, 3] += z_moments_for_each * deltas[: , 1] / self.element_lengths
         
@@ -261,4 +256,7 @@ class TransferLoads(Component):
         loads[1:, 4] += z_moments_for_each * deltas[: , 0] / self.element_lengths
         
         unknowns['loads'] = loads
+        
+        # This is used for the fuel-volume constraint. It should be positive for fuel to fit. 
+        # Fuel density is assumed to be 803 kg/m^3
         unknowns['fuel_vol_delta'] = sum_vols - (params['fuelburn']/2. + self.prob_dict['Wf_reserve']/2.) / 803

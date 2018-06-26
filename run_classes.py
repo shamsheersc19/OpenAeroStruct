@@ -233,18 +233,14 @@ class OASProblem(object):
                     'xshear_cp' : None,
                     'yshear_cp' : None,
                     'zshear_cp' : None,
-                    # 'thickness_cp' : None,
                     'skinthickness_cp' : None,
                     'sparthickness_cp' : None,
                     'toverc_cp' : None,
-                    # 'radius_cp' : None,
 
                     # Geometric variables. The user generally does not need
                     # to change these geometry variables. This is simply
                     # a list of possible geometry variables that is later
                     # filtered down based on which are active.
-                    # 'geo_vars' : ['sweep', 'dihedral', 'twist_cp', 'xshear_cp', 'yshear_cp',
-                    #     'zshear_cp', 'span', 'chord_cp', 'taper', 'thickness_cp', 'radius_cp'],
                         
                     'geo_vars' : ['sweep', 'dihedral', 'twist_cp', 'xshear_cp', 'yshear_cp',
                         'zshear_cp', 'span', 'chord_cp', 'taper', 'sparthickness_cp', 'skinthickness_cp', 'toverc_cp'],
@@ -372,7 +368,6 @@ class OASProblem(object):
 
         # We need to initialize some variables to ones and some others to zeros.
         # Here we define the lists for each case.
-        # ones_list = ['chord_cp', 'thickness_cp', 'radius_cp']
         ones_list = ['chord_cp', 'sparthickness_cp', 'skinthickness_cp', 'toverc_cp']
         zeros_list = ['twist_cp', 'xshear_cp', 'yshear_cp', 'zshear_cp']
         surf_dict['bsp_vars'] = ones_list + zeros_list
@@ -421,9 +416,7 @@ class OASProblem(object):
         surf_dict['num_y'] = num_y
         surf_dict['mesh'] = mesh
 
-        # radius = radii(mesh, surf_dict['t_over_c'])
         chord_fem = chords_fem(mesh)
-        # surf_dict['radius'] = radius
 
         # Set initial thicknesses
         surf_dict['skinthickness'] = chord_fem.real / 20
@@ -698,8 +691,7 @@ class OASProblem(object):
             # Add independent variables that do not belong to a specific component.
             # Note that these are the only ones necessary for structual-only
             # analysis and optimization.
-            # Here we check and only add the variables that are desvars or a
-            # special var, radius, which is necessary to compute weight.
+            # Here we check and only add the variables that are desvars
             indep_vars = [('loads', surface['loads'])]
             for var in surface['geo_vars']:
                 if var in desvar_names or 'thickness' in var or var in surface['initial_geo']:
@@ -727,11 +719,10 @@ class OASProblem(object):
 
             # Add bspline components for active bspline geometric variables.
             # We only add the component if the corresponding variable is a desvar
-            # or special (radius).
+            # or special.
             for var in surface['bsp_vars']:
                 if var in desvar_names or var in surface['initial_geo'] or 'thickness' in var:
                     n_pts = surface['num_y']
-                    # if var in ['thickness_cp', 'radius_cp']:
                     if var in ['skinthickness_cp', 'sparthickness_cp', 'toverc_cp']:
                         n_pts -= 1
                     trunc_var = var.split('_')[0]
@@ -810,7 +801,6 @@ class OASProblem(object):
             for var in surface['bsp_vars']:
                 if var in desvar_names or var in surface['initial_geo']:
                     n_pts = surface['num_y']
-                    # if var in ['thickness_cp', 'radius_cp']:
                     if var in ['sparthickness_cp', 'skinthickness_cp', 'toverc_cp']:
                         n_pts -= 1
                     trunc_var = var.split('_')[0]
@@ -1003,19 +993,13 @@ class OASProblem(object):
             # displacement parameter. This links the coupling within the coupled
             # group that necessitates the subgroup solver.
             root.connect(coupled_name + name + 'loads.loads', coupled_name + name[:-1] + '.loads')
-            # root.connect(coupled_name + name + 'loads.fuel_vol_delta', coupled_name + name[:-1] + '.fuel_vol_delta')
-            root.connect(coupled_name + name + 'loads.chords_fem', name[:-1] + '.chords_fem')
-            print(coupled_name, name)
             root.connect(coupled_name + name + 'loads.A', name[:-1] + '.A')
-            # root.connect(name[:-1] + '.A_enc', coupled_name + name + 'loads.A_enc')
             root.connect(name[:-1] + '.A_int', coupled_name + name + 'loads.A_int')
-            # root.connect(coupled_name + name + 'loads.fuelburn', 'fuelburn')
 
             # Connect aerodyamic mesh to coupled group mesh
             root.connect(name[:-1] + '.mesh', coupled_name + name[:-1] + '.mesh')
 
             # Connect performance calculation variables
-            # root.connect(name[:-1] + '.radius', name + perf_name + 'radius')
             root.connect(name[:-1] + '.A', coupled_name + name + perf_name + 'A')
             root.connect(name[:-1] + '.A_enc', coupled_name + name + perf_name + 'A_enc')
             # root.connect(name[:-1] + '.Iy', name + perf_name + 'Iy')
@@ -1149,9 +1133,6 @@ class OASProblem(object):
         # Note that only the interesting results are promoted here; not all
         # of the parameters.
         if g_factor == 1.:
-            # coupled.add('total_perf',
-            #          TotalPerformance(self.surfaces, self.prob_dict, g_factor),
-            #          promotes=['L_equals_W', 'fuelburn', 'CM', 'CL', 'CD', 'v', 'rho', 'cg', 'weighted_obj', 'total_weight'])
             coupled.add('total_perf',
                      TotalPerformance(self.surfaces, self.prob_dict, g_factor),
                      promotes=['L_equals_W', 'CM', 'CL', 'CD', 'v', 'rho', 'cg', 'weighted_obj', 'total_weight'])
@@ -1222,12 +1203,11 @@ class OASProblem(object):
 
             # Add bspline components for active bspline geometric variables.
             # We only add the component if the corresponding variable is a desvar,
-            # a special parameter (radius), or if the user or geometry provided
+            # a special parameter, or if the user or geometry provided
             # an initial distribution.
             for var in surface['bsp_vars']:
                 if var in desvar_names or var in surface['initial_geo'] or 'thickness' in var:
                     n_pts = surface['num_y']
-                    # if var in ['thickness_cp', 'radius_cp']:
                     if var in ['sparthickness_cp', 'skinthickness_cp', 'toverc_cp']:
                         n_pts -= 1
                     trunc_var = var.split('_')[0]
@@ -1249,16 +1229,11 @@ class OASProblem(object):
             root.add(name, tmp_group, promotes=[])
 
         coupled = self.setup_coupled_group(1., name_orig)
-        # root.add('coupled', coupled, promotes=['v','L_equals_W', 'fuelburn', 'CM', 'CL', 'CD', 'v', 'rho', 'cg', 'weighted_obj', 'total_weight', 'M', 're'])
         root.add('coupled', coupled, promotes=['v','L_equals_W', 'CM', 'CL', 'CD', 'v', 'rho', 'cg', 'weighted_obj', 'total_weight', 'M', 're'])
 
         coupled_maneuver = self.setup_coupled_group(self.prob_dict['g_factor'], name_orig)
         root.add('coupled_maneuver', coupled_maneuver, promotes=['v', 'M', 're', 'failure'])
-        
-        for surface in self.surfaces:
-            name = surface['name']
-            root.connect('coupled.' + name + 'loads.chords_fem', name[:-1] + '.chords_fem')
-            root.connect('coupled_maneuver.' + name + 'loads.chords_fem', name[:-1] + '.chords_fem')
+
 
         self.setup_total_perf_group(coupled, 1.)
         self.setup_total_perf_group(coupled_maneuver, self.prob_dict['g_factor'])

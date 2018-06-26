@@ -67,7 +67,7 @@ if __name__ == "__main__":
                  'solver_combo' : solver_options[1],
                  'solver_atol' : solver_atol,
                  'print_level' : 2,
-                 'compute_static_margin' : False,
+                 'compute_static_margin' : False,   # static margin computation not verified, may not work right now
                  # Flow/environment properties
                  'alpha' : 0.,             # [degrees] angle of attack for cruise case
                  'reynolds_length' : 1.0,  # characteristic Reynolds length
