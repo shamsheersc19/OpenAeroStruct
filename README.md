@@ -6,6 +6,10 @@ See the [conference paper](http://mdolab.engin.umich.edu/sites/default/files/Eng
 
 ![Optimized CRM-type wing example](/example.png?raw=true "Example Optimization Result and Visualization")
 
+Check out some videos:
+[Video with span and sweep design variables](https://youtu.be/c5qO-deZZgs)
+[Video with span, sweep, and chord design variables](https://youtu.be/Q36UYrk4H64)
+
 Documentation of the original OpenAeroStruct [version](https://github.com/mdolab/OpenAeroStruct) is available [here](http://openaerostruct.readthedocs.io/en/latest/).
 We recommend gaining familiarity with the original [version](https://github.com/mdolab/OpenAeroStruct) first.
 
@@ -48,4 +52,4 @@ If using this code, please check regularly for updates and please direct any que
 
 ## Notes
 
-This code may not currently work for multiple lifting surfaces, and for aerodynamics-only and structures-only analysis and optimizations. Further developments are planned.
+This code may not currently work for multiple lifting surfaces, and for aerodynamics-only and structures-only analyses and optimizations. Further developments are planned.

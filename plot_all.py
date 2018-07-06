@@ -484,7 +484,7 @@ class Display(object):
             self.ax2.locator_params(axis='x',nbins=3)
             self.ax2.set_ylim([self.min_twist, self.max_twist])
             self.ax2.set_xlim([-1, 1])
-            self.ax2.set_ylabel('twist [deg]', rotation="horizontal", ha="right")
+            self.ax2.set_ylabel('jig twist [deg]', rotation="horizontal", ha="right")
 
             self.ax3.cla()
             self.ax3.text(0.01, 0.1+.4, 'elliptical',
@@ -665,14 +665,14 @@ class Display(object):
                             def_mesh0 = (def_mesh0 - mesh0) * 30 + def_mesh0
                         else:
                             def_mesh0 = (def_mesh0 - mesh0) * 2 + def_mesh0
-                        self.ax.plot_wireframe(x_def, y_def, z_def, rstride=1, cstride=1, color='k')
-                        self.ax.plot_wireframe(x, y, z, rstride=1, cstride=1, color='k', alpha=.3)
+                        self.ax.plot_wireframe(x_def, y_def, z_def, rstride=1, cstride=1, color='k', linewidth = 0.75)
+                        self.ax.plot_wireframe(x, y, z, rstride=1, cstride=1, color='k', alpha=.3, linewidth = 0.75)
                         self.ax.plot_surface(x_box, y_box, z_box, rstride=1, cstride=1, color='k', alpha=0.25) # wingbox viz
                         self.ax.plot_surface(x_box, y_box, z_box2, rstride=1, cstride=1, color='k', alpha=0.25) # wingbox viz
                         self.ax.plot_surface(x_box3, y_box3, z_box3, rstride=1, cstride=1, color='k', alpha=0.25) # wingbox viz
                         self.ax.plot_surface(x_box4, y_box4, z_box4, rstride=1, cstride=1, color='k', alpha=0.25) # wingbox viz
                     else:
-                        self.ax.plot_wireframe(x, y, z, rstride=1, cstride=1, color='k')
+                        self.ax.plot_wireframe(x, y, z, rstride=1, cstride=1, color='k', linewidth = 0.75)
                         self.ax.plot_surface(x_box, y_box, z_box, rstride=1, cstride=1, color='k', alpha=0.25) # wingbox viz
                         self.ax.plot_surface(x_box, y_box, z_box2, rstride=1, cstride=1, color='k', alpha=0.25) # wingbox viz
                         self.ax.plot_surface(x_box3, y_box3, z_box3, rstride=1, cstride=1, color='k', alpha=0.25) # wingbox viz
