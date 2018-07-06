@@ -6,7 +6,7 @@ from numpy import cos, sin, tan
 
 from openmdao.api import Component
 from .b_spline import get_bspline_mtx
-from .spatialbeam import chords_fem
+from .spatialbeam import chords_streamwise
 
 try:
     import OAS_API
@@ -333,6 +333,8 @@ class GeometryMesh(Component):
     OpenMDAO component that performs mesh manipulation functions. It reads in
     the initial mesh from the surface dictionary and outputs the altered
     mesh based on the geometric design variables.
+    Additionally, this component provides twist and chord values for the wingbox
+    segments.
 
     Depending on the design variables selected or the supplied geometry information,
     only some of the follow parameters will actually be given to this component.
@@ -357,6 +359,12 @@ class GeometryMesh(Component):
     mesh[nx, ny, 3] : numpy array
         Modified mesh based on the initial mesh in the surface dictionary and
         the geometric design variables.
+    chord_fem : numpy array
+        Chord lengths for the wingbox segments (normal to FEM elements)
+    streamwise_chords : numpy array
+        VLM mesh chord lengths in the streamwise direction
+    twist_fem : numpy array
+        Twist angles for the wingbox segments
     """
 
     def __init__(self, surface, desvars={}):
@@ -448,14 +456,16 @@ class GeometryMesh(Component):
         shear_z(mesh, self.geo_params['zshear'])
         rotate(mesh, self.geo_params['twist'], self.symmetry, self.rotate_x)
 
-        ch_fem = chords_fem(mesh)
+        ch_fem = chords_streamwise(mesh)
         unknowns['streamwise_chords'] = ch_fem.copy()
-        twist_fem = ch_fem.copy()
+        
+        twist_fem = np.ones(ch_fem.shape)
         
         surface = self.surface
         w = (surface['data_x_upper'][0] *(surface['data_y_upper'][0]-surface['data_y_lower'][0]) + \
         surface['data_x_upper'][-1]*(surface['data_y_upper'][-1]-surface['data_y_lower'][-1])) / \
-        ( (surface['data_y_upper'][0]-surface['data_y_lower'][0]) + (surface['data_y_upper'][-1]-surface['data_y_lower'][-1]))
+        ((surface['data_y_upper'][0]-surface['data_y_lower'][0]) + (surface['data_y_upper'][-1]-surface['data_y_lower'][-1]))
+        
         nodes = (1-w) * mesh[0, :, :] + w * mesh[-1, :, :]
         
         mesh_vectors = mesh[-1, :, :] - mesh[0, :, :]
@@ -471,7 +481,7 @@ class GeometryMesh(Component):
             temp_vec[0] = 0. # vector along element minus x component
             
             # This is used to get chord length normal to FEM element 
-            cos_theta_fe_sweep = elem_vec.dot(temp_vec) / norm_func(elem_vec) / norm_func(temp_vec)
+            cos_theta_fe_sweep = norm_func(temp_vec) / norm_func(elem_vec)
             ch_fem_temp_val = ch_fem[ielem]
             ch_fem[ielem] = ch_fem[ielem] * cos_theta_fe_sweep
             
@@ -480,23 +490,23 @@ class GeometryMesh(Component):
             temp_mesh_vectors_0 = mesh_vec_0.copy()
             temp_mesh_vectors_0[2] = 0.
             
-            dot_prod_0 = mesh_vec_0.dot(temp_mesh_vectors_0) / norm_func(mesh_vec_0) / norm_func(temp_mesh_vectors_0)
+            cos_twist_0 = norm_func(temp_mesh_vectors_0) / norm_func(mesh_vec_0)
             
-            if dot_prod_0 > 1.:
+            if cos_twist_0 > 1.:
                 theta_0 = 0. # to prevent nan in case value for arccos is greater than 1 due to machine precision
             else:    
-                theta_0 = np.arccos(dot_prod_0)
+                theta_0 = np.arccos(cos_twist_0)
             
             mesh_vec_1 = mesh_vectors[ielem + 1]
             temp_mesh_vectors_1 = mesh_vec_1.copy()
             temp_mesh_vectors_1[2] = 0.
             
-            dot_prod_1 = mesh_vec_1.dot(temp_mesh_vectors_1) / norm_func(mesh_vec_1) / norm_func(temp_mesh_vectors_1)
+            cos_twist_1 = norm_func(temp_mesh_vectors_1) / norm_func(mesh_vec_1)
             
-            if dot_prod_1 > 1.:
+            if cos_twist_1 > 1.:
                 theta_1 = 0. # to prevent nan in case value for arccos is greater than 1 due to machine precision
             else:    
-                theta_1 = np.arccos(dot_prod_1)
+                theta_1 = np.arccos(cos_twist_1)
             
             twist_fem[ielem] = (theta_0 + theta_1) / 2 * ch_fem_temp_val / ch_fem[ielem]
 
@@ -551,7 +561,7 @@ class MonotonicConstraint(Component):
 
         return jac
 
-def gen_crm_mesh(num_x, num_y, span, chord, span_cos_spacing=0., chord_cos_spacing=0., wing_type="CRM:jig"):
+def gen_crm_mesh(num_x, num_y, span, chord, span_cos_spacing=0., chord_cos_spacing=0., wing_type="CRM"):
     """ Generate Common Research Model wing mesh.
 
     Parameters
@@ -576,7 +586,8 @@ def gen_crm_mesh(num_x, num_y, span, chord, span_cos_spacing=0., chord_cos_spaci
         chordwise node points near the wingtips.
     wing_type : string (optional)
         Describes the desired CRM shape. Current options are:
-        "CRM:jig" (undeformed jig shape),
+        "uCRM_based"
+        "CRM",
         "CRM:alpha_2.75" (shape from wind tunnel testing at a=2.75 from DPW6)
 
     Returns
@@ -602,7 +613,7 @@ def gen_crm_mesh(num_x, num_y, span, chord, span_cos_spacing=0., chord_cos_spaci
         # Processed using `process_crm_slices.py`.
         # This corresponds to the CRM shape in the wind tunnel when alpha is set to 2.75.
         #
-        # Note that the first line is copied from the jig shape because we do not
+        # Note that the first line is copied from the 1g shape because we do not
         # have information about the wing section inside of the fuselage
         # because the cgns file has the wing-body together with cut meshes.
         raw_crm_points = np.array([
@@ -630,8 +641,8 @@ def gen_crm_mesh(num_x, num_y, span, chord, span_cos_spacing=0., chord_cos_spaci
         [0.9573781131, 1742.6251350394, 1106.2617173228, 274.7061785039, -4.1417911628, 120.0493724390],
         [1.0000000000, 1780.1757874016, 1155.5118110236, 285.5045883858, -4.6778406881, 108.0150257616]])
 
-    # If no special wing was requested, we'll use the jig shape
-    elif wing_type == 'CRM': 
+    # If no special wing was requested use the 1g shape
+    elif wing_type == 'CRM':
         # eta, xle, yle, zle, twist, chord
         # Info taken from AIAA paper 2008-6919 by Vassberg
         raw_crm_points = np.array([

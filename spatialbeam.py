@@ -25,16 +25,16 @@ def norm(vec):
 def unit(vec):
     return vec / norm(vec)
 
-def chords_fem(mesh):
+def chords_streamwise(mesh):
     """
-    Obtain the chord of the FEM element.
+    Obtain the streamwise chords.
     This computes the chords by taking the average of the chords from the mesh.
     
     """
     vectors = mesh[-1, :, :] - mesh[0, :, :]
-    chords_fem = np.sqrt(np.sum(vectors**2, axis=1))
-    chords_fem = 0.5 * chords_fem[:-1] + 0.5 * chords_fem[1:] # Average chord between nodes
-    return chords_fem
+    chords_streamwise = np.sqrt(np.sum(vectors**2, axis=1))
+    chords_streamwise = 0.5 * chords_streamwise[:-1] + 0.5 * chords_streamwise[1:] # Average chord between nodes
+    return chords_streamwise
 
 def _assemble_system(nodes, A, J, Iy, Iz,
                      K_a, K_t, K_y, K_z,
@@ -655,14 +655,13 @@ class SpatialBeamVonMisesTube(Component):
     ----------
     nodes[ny, 3] : numpy array
         Flattened array with coordinates for each FEM node.
-    radius[ny-1] : numpy array
-        Radii for each FEM element.
     disp[ny, 6] : numpy array
         Displacements of each FEM node.
+    See materials.py for the descriptions of other params.
 
     Returns
     -------
-    vonmises[ny-1, 2] : numpy array
+    vonmises[ny-1, 4] : numpy array
         von Mises stress magnitudes for each FEM element.
 
     """
@@ -791,7 +790,7 @@ class SpatialBeamFailureKS(Component):
 
     Parameters
     ----------
-    vonmises[ny-1, 2] : numpy array
+    vonmises[ny-1, 4] : numpy array
         von Mises stress magnitudes for each FEM element.
 
     Returns
@@ -859,12 +858,12 @@ class SpatialBeamFailureExact(Component):
 
     Parameters
     ----------
-    vonmises[ny-1, 2] : numpy array
+    vonmises[ny-1, 4] : numpy array
         von Mises stress magnitudes for each FEM element.
 
     Returns
     -------
-    failure[ny-1, 2] : numpy array
+    failure[ny-1, 4] : numpy array
         Array of failure conditions. Positive if element has failed.
 
     """

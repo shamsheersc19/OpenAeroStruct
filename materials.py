@@ -154,27 +154,42 @@ def wingbox_props(chord, sparthickness, skinthickness, data_x_upper, data_x_lowe
 
 class MaterialsTube(Component):
     """
-    Compute geometric properties for a tube element.
-    The thicknesses are added to the interior of the element, so the
-    'radius' value is the outer radius of the tube.
+    Compute geometric properties for a wingbox element.
 
     Parameters
     ----------
-    radius : numpy array
-        Outer radii for each FEM element.
-    thickness : numpy array
-        Tube thickness for each FEM element.
+    chords_fem : numpy array
+        Chords normal to each FEM element.
+    streamwise_chords : numpy array
+        Chords in the streamwise direction.
+    twist_fem : numpy array
+        Twists for the wingbox segments.
+    skinthickness : numpy array
+        Skin thickness for each wingbox segment.
+    sparthickness : numpy array
+        Spar thickness for each wingbox segment.
+    toverc : numpy array
+        Streamwise thickness-to-chord ratios.
 
     Returns
     -------
     A : numpy array
-        Cross-sectional area for each FEM element.
+        Cross-sectional area for each wingbox segment.
+    A_enc : numpy array
+        Enclosed area for each wingbox segment.
+    A_int : numpy array
+        Internal area for each wingbox segment (for fuel volume).
+    
     Iy : numpy array
         Area moment of inertia around the y-axis for each FEM element.
     Iz : numpy array
         Area moment of inertia around the z-axis for each FEM element.
     J : numpy array
         Polar moment of inertia for each FEM element.
+    Qz : numpy array 
+        First moment of area for shear stress calcs in the spars
+    htop, hbottom, hfront, hrear : numpy arrays
+        Max distances from the neutral axes for bending stress calculations
     """
 
     def __init__(self, surface):

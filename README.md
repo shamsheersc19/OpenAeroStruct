@@ -45,3 +45,7 @@ The keywords used for each file are explained in their respective docstrings at 
 If you wish to examine the code in more depth, see `run_classes.py` and the methods it calls. These methods interface directly with OpenMDAO.
 
 If using this code, please check regularly for updates and please direct any questions or concerns to sschau@umich.edu.
+
+## Notes
+
+This code may not currently work for multiple lifting surfaces, and for aerodynamics-only and structures-only analysis and optimizations. Further developments are planned.

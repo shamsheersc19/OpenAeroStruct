@@ -1477,6 +1477,7 @@ class ViscousDrag(Component):
     Compute the skin friction drag if the with_viscous option is True.
     If not, the CDv is 0.
     This component exists for each lifting surface.
+    This also includes a wave drag computation based on the Korn equation.
 
     Parameters
     ----------

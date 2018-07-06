@@ -32,7 +32,7 @@ from six import iteritems
 from .geometry import GeometryMesh, Bspline, gen_crm_mesh, gen_rect_mesh, MonotonicConstraint
 from .transfer import TransferDisplacements, TransferLoads
 from .vlm import VLMStates, VLMFunctionals, VLMGeometry
-from .spatialbeam import SpatialBeamStates, SpatialBeamFunctionals, SpatialBeamSetup, chords_fem
+from .spatialbeam import SpatialBeamStates, SpatialBeamFunctionals, SpatialBeamSetup, chords_streamwise
 from .materials import MaterialsTube
 from .functionals import TotalPerformance, TotalAeroPerformance, FunctionalBreguetRange, FunctionalEquilibrium
 # from .gs_newton import HybridGSNewton
@@ -416,7 +416,7 @@ class OASProblem(object):
         surf_dict['num_y'] = num_y
         surf_dict['mesh'] = mesh
 
-        chord_fem = chords_fem(mesh)
+        chord_fem = chords_streamwise(mesh)
 
         # Set initial thicknesses
         surf_dict['skinthickness'] = chord_fem.real / 20
