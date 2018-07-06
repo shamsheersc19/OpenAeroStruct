@@ -1003,7 +1003,7 @@ class OASProblem(object):
             root.connect(name[:-1] + '.A', coupled_name + name + perf_name + 'A')
             root.connect(name[:-1] + '.A_enc', coupled_name + name + perf_name + 'A_enc')
             # root.connect(name[:-1] + '.Iy', name + perf_name + 'Iy')
-            root.connect(name[:-1] + '.Iz', coupled_name + name + perf_name + 'Iz')
+            # root.connect(name[:-1] + '.Iz', coupled_name + name + perf_name + 'Iz')
             root.connect(name[:-1] + '.J', coupled_name + name + perf_name + 'J')
             root.connect(name[:-1] + '.htop', coupled_name + name + perf_name + 'htop')
             root.connect(name[:-1] + '.hbottom', coupled_name + name + perf_name + 'hbottom')

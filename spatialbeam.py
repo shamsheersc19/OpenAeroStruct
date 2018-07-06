@@ -681,7 +681,6 @@ class SpatialBeamVonMisesTube(Component):
                         dtype=complex))
                         
         self.add_param('Qz', val=np.zeros((self.ny - 1), dtype=complex))
-        self.add_param('Iz', val=np.zeros((self.ny - 1), dtype=complex))
         self.add_param('J', val=np.zeros((self.ny - 1), dtype=complex))
         self.add_param('A_enc', val=np.zeros((self.ny - 1), dtype=complex))
         
@@ -702,7 +701,6 @@ class SpatialBeamVonMisesTube(Component):
 
         self.T = np.zeros((3, 3), dtype=complex)
         self.x_gl = np.array([1, 0, 0], dtype=complex)
-        self.t = 0
         
         self.tssf = top_skin_strength_factor = surface['strength_factor_for_upper_skin']
 
@@ -713,7 +711,6 @@ class SpatialBeamVonMisesTube(Component):
         vonmises = unknowns['vonmises']
         A_enc = params['A_enc']
         Qy = params['Qz']
-        Iz = params['Iz']
         J = params['J']
         htop = params['htop']
         hbottom = params['hbottom']
@@ -750,10 +747,12 @@ class SpatialBeamVonMisesTube(Component):
             
             axial_stress = E * (u1x - u0x) / L      # this is stress = modulus * strain; positive is tensile
             torsion_stress = G * J[ielem] / L * (r1x - r0x) / 2 / sparthickness[ielem] / A_enc[ielem]   # this is Torque / (2 * thickness_min * Area_enclosed)
+            
             top_bending_stress = E / (L**2) * (6 * u0y + 2 * r0z * L - 6 * u1y + 4 * r1z * L ) * htop[ielem] # this is moment * htop / I  
             bottom_bending_stress = - E / (L**2) * (6 * u0y + 2 * r0z * L - 6 * u1y + 4 * r1z * L ) * hbottom[ielem] # this is moment * htop / I  
-            front_bending_stress = - E / (L**2) * (-6 * u0z + 2 * r0y * L + 6 * u1z + 4 * r1y * L ) * hfront[ielem] # this is moment * htop / I  
-            rear_bending_stress = E / (L**2) * (-6 * u0z + 2 * r0y * L + 6 * u1z + 4 * r1y * L ) * hrear[ielem] # this is moment * htop / I  
+            
+            front_bending_stress = E / (L**2) * (6 * u0z - 2 * r0y * L - 6 * u1z - 4 * r1y * L ) * hfront[ielem] # this is moment * htop / I  
+            rear_bending_stress = - E / (L**2) * (6 * u0z - 2 * r0y * L - 6 * u1z - 4 * r1y * L ) * hrear[ielem] # this is moment * htop / I  
             
             vertical_shear =  E / (L**3) *(-12 * u0y - 6 * r0z * L + 12 * u1y - 6 * r1z * L ) * Qy[ielem] / (2 * sparthickness[ielem]) # shear due to bending (VQ/It) note: the I used to get V cancels the other I
             
