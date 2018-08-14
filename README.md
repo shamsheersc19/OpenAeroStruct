@@ -12,8 +12,8 @@ Check out some videos:
 
 [Video with span, sweep, and chord design variables](https://youtu.be/Q36UYrk4H64)
 
-Documentation of the original OpenAeroStruct [version](https://github.com/mdolab/OpenAeroStruct) is available [here](http://openaerostruct.readthedocs.io/en/latest/).
-We recommend gaining familiarity with the original [version](https://github.com/mdolab/OpenAeroStruct) first.
+Documentation of the original OpenAeroStruct [version](https://github.com/mdolab/OpenAeroStruct/releases/tag/v1.0) is available [here](http://openaerostruct.readthedocs.io/en/latest/).
+We recommend gaining familiarity with the original [version](https://github.com/mdolab/OpenAeroStruct/releases/tag/v1.0) first.
 
 Please see the [SMO journal paper](https://link.springer.com/article/10.1007%2Fs00158-018-1912-8) for more information and please cite it, along with the conference paper linked above, if you use this version of OpenAeroStruct in your research. Here's an open-access read-only copy of the journal paper: http://rdcu.be/Gtl1
 
