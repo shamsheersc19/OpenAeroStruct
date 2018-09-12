@@ -1,8 +1,21 @@
+# Important note
+
+A new version of OpenAeroStruct with the wingbox model (using OpenMDAO version 2) is now available at [github.com/mdolab/OpenAeroStruct](https://github.com/mdolab/OpenAeroStruct).
+We recommend using the newer version.
+In the [examples sub-directory](https://github.com/mdolab/OpenAeroStruct/tree/master/openaerostruct/examples) of the newer version, you can find a run script (run_aerostruct_uCRM_multipoint.py) and a visualization script (plot_wing_wb_mpt.py) to reproduce the optimization cases in the EngOpt [conference paper](https://www.researchgate.net/publication/325986597_Low-fidelity_aerostructural_optimization_of_aircraft_wings_with_a_simplified_wingbox_model_using_OpenAeroStruct).
+See the [documentation](https://mdolab.github.io/OpenAeroStruct/) for more on using the new version of OpenAeroStruct.
+
+Check out some optimization videos:
+
+[Video with span and sweep design variables](https://youtu.be/c5qO-deZZgs)
+
+[Video with span, sweep, and chord design variables](https://youtu.be/Q36UYrk4H64)
+
 # OpenAeroStruct + wingbox
 
 OpenAeroStruct is a Python tool that performs aerostructural optimization of lifting surfaces using OpenMDAO. It uses a vortex lattice method (VLM) for the aerodynamics and a finite element method (FEM) spatial beam model with 6-DOF-per-node elements for the structures.
 This repository contains a modified version of OpenAeroStruct that uses effective section properties of a wingbox.
-See the [conference paper](http://mdolab.engin.umich.edu/sites/default/files/EngOpt_preprint_0.pdf) for more on the wingbox model.
+See the [conference paper](https://www.researchgate.net/publication/325986597_Low-fidelity_aerostructural_optimization_of_aircraft_wings_with_a_simplified_wingbox_model_using_OpenAeroStruct) for more on the wingbox model.
 
 ![Optimized CRM-type wing example](/example.png?raw=true "Example Optimization Result and Visualization")
 
