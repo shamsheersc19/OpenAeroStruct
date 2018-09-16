@@ -11,6 +11,8 @@ Check out some optimization videos:
 
 [Video with span, sweep, and chord design variables](https://youtu.be/Q36UYrk4H64)
 
+See below for notes on the original version (using OpenMDAO version 1.7).
+
 # OpenAeroStruct + wingbox
 
 OpenAeroStruct is a Python tool that performs aerostructural optimization of lifting surfaces using OpenMDAO. It uses a vortex lattice method (VLM) for the aerodynamics and a finite element method (FEM) spatial beam model with 6-DOF-per-node elements for the structures.
