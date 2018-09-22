@@ -2,7 +2,8 @@
 
 A new version of OpenAeroStruct with the wingbox model (using OpenMDAO version 2) is now available at [github.com/mdolab/OpenAeroStruct](https://github.com/mdolab/OpenAeroStruct).
 We recommend using the new version.
-In the [examples sub-directory](https://github.com/mdolab/OpenAeroStruct/tree/master/openaerostruct/examples) of the new version, you can find a run script (run_aerostruct_uCRM_multipoint.py) and a visualization script to reproduce the optimization cases in the EngOpt [conference paper](https://www.researchgate.net/publication/325986597_Low-fidelity_aerostructural_optimization_of_aircraft_wings_with_a_simplified_wingbox_model_using_OpenAeroStruct).
+In the [examples sub-directory](https://github.com/mdolab/OpenAeroStruct/tree/master/openaerostruct/examples) of the new version, you can find a run script (run_aerostruct_uCRM_multipoint.py) to reproduce the optimization cases in the EngOpt [conference paper](https://www.researchgate.net/publication/325986597_Low-fidelity_aerostructural_optimization_of_aircraft_wings_with_a_simplified_wingbox_model_using_OpenAeroStruct).
+The visualization script (plot_wingbox.py) can be found in the [utils sub-directory](https://github.com/mdolab/OpenAeroStruct/tree/master/openaerostruct/utils).
 See the [documentation](https://mdolab.github.io/OpenAeroStruct/) for more on using the new version of OpenAeroStruct.
 
 Check out some optimization videos:
