@@ -300,7 +300,7 @@ prob.model.add_constraint('fuel_diff', equals=0.)
 
 prob.driver = om.ScipyOptimizeDriver()
 prob.driver.options['optimizer'] = 'SLSQP'
-prob.driver.options['tol'] = 1e-3
+prob.driver.options['tol'] = 1e-2
 
 #docs checkpoint 26
 
